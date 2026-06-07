@@ -15,7 +15,7 @@ To recreate this project with the same configuration:
 
 ```sh
 # recreate this project
-bun x sv@0.15.4 create --template minimal --types ts --add prettier eslint playwright tailwindcss="plugins:none" drizzle="database:sqlite+sqlite:better-sqlite3" mcp="ide:other+setup:local" --install bun ./
+bun x sv@0.15.4 create --template minimal --types ts --add prettier eslint playwright tailwindcss="plugins:none" mcp="ide:other+setup:local" --install bun ./
 ```
 
 ## Developing
