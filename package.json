@@ -8,10 +8,10 @@
 		"build": "vite build",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
-		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && biome check .",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"lint": "prettier --check . && eslint .",
-		"format": "prettier --write .",
+		"format": "biome format --write .",
 		"test:e2e": "playwright install && playwright test",
 		"test": "npm run test:e2e",
 		"db:push": "drizzle-kit push",
@@ -52,6 +52,7 @@
 		"vite": "^8.0.16"
 	},
 	"dependencies": {
+		"@biomejs/biome": "^2.4.16",
 		"better-sqlite3": "^12.10.0"
 	}
 }
