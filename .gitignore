@@ -1,6 +1,8 @@
+.DS_Store
 .svelte-kit
 .env
 
 build
+coverage
 dist
 node_modules
