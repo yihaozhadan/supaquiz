@@ -1,42 +1,113 @@
-# sv
+# SupaQuiz
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+A lightweight, self-hostable open-source quiz platform. Create, publish, and take quizzes locally with no accounts, no cloud dependencies, and no subscription barriers.
 
-## Creating a project
+## Features
 
-If you're seeing this, you've probably already done this step. Congrats!
+### Quiz Builder
+- Create quizzes with multiple question types: Multiple Choice (single/multiple answers), True/False, Fill-in-the-Blank
+- Optional password protection per quiz
+- Custom participant intake forms
+- Question shuffling and randomization
+- Time limits and attempt restrictions
+- Scheduling with activation/expiration dates
+- Import/export quizzes as JSON
+- Media support (images, audio, video, code snippets)
+
+### Admin Dashboard
+- Manage all quizzes in one place
+- View quiz status (draft/active/expired)
+- Simple result metrics (total attempts, average/high/low scores)
+- Export results to CSV/JSON
+- File management for uploaded media
+
+### Quiz Taking
+- Auto-save answers every 30 seconds
+- Auto-submit when time limit expires
+- Instant scoring and optional answer reveal
+- Mobile-friendly interface
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Framework | SvelteKit |
+| Language | TypeScript |
+| Styling | TailwindCSS 4 |
+| Database | SQLite (WAL mode) |
+| ORM | Drizzle ORM |
+| Runtime | Bun |
+| Testing | Playwright + Vitest |
+
+## Getting Started
+
+### Prerequisites
+
+- [Bun](https://bun.sh/) runtime
+
+### Installation
 
 ```sh
-# create a new project
-npx sv create my-app
+# Clone the repository
+git clone https://github.com/your-username/supaquiz.git
+cd supaquiz
+
+# Install dependencies
+bun install
 ```
 
-To recreate this project with the same configuration:
+### Development
 
 ```sh
-# recreate this project
-bun x sv@0.15.4 create --template minimal --types ts --add prettier eslint playwright tailwindcss="plugins:none" mcp="ide:other+setup:local" --install bun ./
+# Start development server
+bun run dev
+
+# Open in browser
+bun run dev -- --open
 ```
 
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+### Testing
 
 ```sh
-npm run dev
+# Run unit tests
+bun run test:unit
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+# Run end-to-end tests
+bun run test:e2e
+
+# Run all tests
+bun test
 ```
 
-## Building
-
-To create a production version of your app:
+### Building
 
 ```sh
-npm run build
+# Create production build
+bun run build
+
+# Preview production build
+bun run preview
 ```
 
-You can preview the production build with `npm run preview`.
+## Project Structure
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+```
+src/
+├── lib/
+│   ├── server/
+│   │   └── db/          # Database schema and migrations
+│   ├── assets/          # Static assets
+│   ├── index.ts         # Shared utilities
+│   └── utils.ts         # Helper functions
+├── routes/
+│   ├── +layout.svelte   # Root layout
+│   ├── +page.svelte     # Home page
+│   └── layout.css       # Global styles
+├── test/                # Test files
+├── app.d.ts             # TypeScript declarations
+└── app.html             # HTML template
+```
+
+## License
+
+See [LICENSE](LICENSE) for details.
