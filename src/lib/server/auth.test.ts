@@ -2,8 +2,39 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createSession, verifySession, deleteSession } from './auth';
 import type { Cookies } from '@sveltejs/kit';
 
-// Mock environment variables
-process.env.SESSION_SECRET = 'test-secret-key-for-testing';
+// Mock jose to avoid crypto issues in test environment
+vi.mock('jose', () => ({
+	SignJWT: class {
+		constructor(payload: any) {
+			this.payload = payload;
+		}
+		setProtectedHeader(header: any) {
+			return this;
+		}
+		setIssuedAt() {
+			return this;
+		}
+		setExpirationTime(time: string) {
+			return this;
+		}
+		async sign(secret: any) {
+			return 'mock-jwt-token';
+		}
+		payload: any;
+	},
+	jwtVerify: vi.fn()
+}));
+
+// Mock the db module to avoid database initialization in tests
+vi.mock('./db', () => ({
+	db: {
+		query: {
+			admin: {
+				findFirst: vi.fn()
+			}
+		}
+	}
+}));
 
 describe('Session Helpers', () => {
 	let mockCookies: any;
