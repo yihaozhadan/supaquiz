@@ -8,7 +8,14 @@ services:
     ports:
       - "3000:3000"
     volumes:
+      # Mount data directory for SQLite database persistence
       - ./data:/data
     environment:
       - NODE_ENV=production
+      # Database URL for SQLite (relative to mounted volume)
+      - DATABASE_URL=/data/supaquiz.db
+      # Admin credentials (set these in production)
+      - ADMIN_USER=${ADMIN_USER:-admin}
+      - ADMIN_PASS_HASH=${ADMIN_PASS_HASH}
+      - SESSION_SECRET=${SESSION_SECRET}
     restart: unless-stopped

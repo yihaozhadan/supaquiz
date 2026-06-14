@@ -54,7 +54,9 @@
 		"vitest": "^4.1.8"
 	},
 	"dependencies": {
+		"argon2": "^0.44.0",
 		"better-sqlite3": "^12.10.0",
-		"drizzle-orm": "^0.45.2"
+		"drizzle-orm": "^0.45.2",
+		"jose": "^6.2.3"
 	}
 }

@@ -49,11 +49,24 @@ A lightweight, self-hostable open-source quiz platform. Create, publish, and tak
 
 ```sh
 # Clone the repository
-git clone https://github.com/your-username/supaquiz.git
+git clone https://github.com/yihaozhadan/supaquiz.git
 cd supaquiz
 
 # Install dependencies
 bun install
+
+# Create data directory for SQLite database
+mkdir -p data
+
+# Copy environment variables and configure
+cp .env.example .env
+# Edit .env and set ADMIN_USER, ADMIN_PASS_HASH, and SESSION_SECRET
+
+# Generate a password hash for the admin account
+bun run scripts/generate-hash.ts
+
+# Initialize database schema
+bun run db:push
 ```
 
 ### Development
