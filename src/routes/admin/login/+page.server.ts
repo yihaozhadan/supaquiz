@@ -11,7 +11,12 @@ const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 const RATE_LIMIT_MAX = 5;
 const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
 
+// Disable rate limiting for e2e tests
+const isTestEnv = process.env.SESSION_SECRET === 'test-secret-key-for-e2e-testing';
+
 function checkRateLimit(ip: string): boolean {
+	if (isTestEnv) return true;
+	
 	const now = Date.now();
 	const record = rateLimitMap.get(ip);
 
