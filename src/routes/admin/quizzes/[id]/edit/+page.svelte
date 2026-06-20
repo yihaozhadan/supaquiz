@@ -1,13 +1,16 @@
 <script lang="ts">
-	import { page } from '$app/stores';
-	import { enhance } from '$app/forms';
+	import { page } from '$app/state';
 
 	let { data, form } = $props();
 
-	const quiz = data.quiz;
-	let intakeFormSchema = $state(typeof quiz.intakeFormSchema === 'string'
-		? JSON.parse(quiz.intakeFormSchema)
-		: quiz.intakeFormSchema);
+	const quiz = $derived(data.quiz);
+	let intakeFormSchema = $state<{ name: string; type: string; required: boolean }[]>([]);
+
+	$effect(() => {
+		intakeFormSchema = typeof quiz.intakeFormSchema === 'string'
+			? JSON.parse(quiz.intakeFormSchema)
+			: quiz.intakeFormSchema;
+	});
 
 	function addField() {
 		intakeFormSchema = [...intakeFormSchema, { name: '', type: 'text', required: false }];
@@ -27,7 +30,7 @@
 				</div>
 				<div class="flex items-center">
 					<span class="mr-4 text-sm text-gray-700">
-						Logged in as: {$page.data.admin?.username}
+						Logged in as: {page.data.admin?.username}
 					</span>
 					<form method="POST" action="/admin/logout">
 						<button
@@ -50,13 +53,9 @@
 
 			<h1 class="text-2xl font-bold text-gray-900 mb-6">Edit Quiz: {quiz.title}</h1>
 
-			{#if form?.errors}
+			{#if form?.error}
 				<div class="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-					{#each Object.entries(form.errors as Record<string, string[]>) as [field, errors]}
-						{#each errors as error}
-							<div>{field}: {error}</div>
-						{/each}
-					{/each}
+					{form.error}
 				</div>
 			{/if}
 

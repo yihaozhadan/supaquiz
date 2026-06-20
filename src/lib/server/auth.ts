@@ -24,8 +24,8 @@ export async function createSession(username: string, cookies: Cookies) {
 
 	cookies.set(SESSION_COOKIE_NAME, token, {
 		httpOnly: true,
-		path: '/admin',
-		secure: process.env.NODE_ENV === 'production',
+		path: '/',
+		secure: false, // Always false for local development and testing
 		sameSite: 'lax',
 		maxAge: SESSION_EXPIRY_HOURS * 60 * 60
 	});
@@ -51,5 +51,5 @@ export async function verifySession(cookies: Cookies) {
 }
 
 export function deleteSession(cookies: Cookies) {
-	cookies.delete(SESSION_COOKIE_NAME, { path: '/admin' });
+	cookies.delete(SESSION_COOKIE_NAME, { path: '/' });
 }

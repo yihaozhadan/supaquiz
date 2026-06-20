@@ -8,7 +8,6 @@ import {
 	questionCreateSchema,
 	questionUpdateSchema
 } from './validations';
-import { fail } from '@sveltejs/kit';
 
 export async function getQuizzes() {
 	const quizzes = await db.query.quiz.findMany({
@@ -63,10 +62,13 @@ export async function createQuiz(formData: FormData) {
 		intakeFormSchema: data.intakeFormSchema ? JSON.parse(data.intakeFormSchema as string) : []
 	};
 
+	console.log('Quiz creation data:', JSON.stringify(processedData, null, 2));
+
 	const parsed = quizCreateSchema.safeParse(processedData);
 
 	if (!parsed.success) {
-		return fail(400, { errors: parsed.error.flatten().fieldErrors });
+		console.log('Validation errors:', JSON.stringify(parsed.error.flatten(), null, 2));
+		return { success: false, error: 'Invalid data' };
 	}
 
 	const newQuiz = await db
@@ -91,13 +93,15 @@ export async function updateQuiz(formData: FormData) {
 		maxParticipants: data.maxParticipants ? Number(data.maxParticipants) : undefined,
 		shuffleQuestions: data.shuffleQuestions === 'on',
 		allowBackNavigation: data.allowBackNavigation === 'on',
-		intakeFormSchema: data.intakeFormSchema ? JSON.parse(data.intakeFormSchema as string) : undefined
+		intakeFormSchema: data.intakeFormSchema ? JSON.parse(data.intakeFormSchema as string) : undefined,
+		activateAt: data.activateAt ? new Date(data.activateAt as string) : undefined,
+		expireAt: data.expireAt ? new Date(data.expireAt as string) : undefined
 	};
 
 	const parsed = quizUpdateSchema.safeParse(processedData);
 
 	if (!parsed.success) {
-		return fail(400, { errors: parsed.error.flatten().fieldErrors });
+		return { success: false, error: 'Invalid data' };
 	}
 
 	const { id, ...updateData } = parsed.data;
@@ -117,7 +121,7 @@ export async function updateQuiz(formData: FormData) {
 
 export async function deleteQuiz(id: string) {
 	await db.delete(quiz).where(eq(quiz.id, id));
-	return { success: true };
+	return { success: 'Quiz deleted successfully' };
 }
 
 export async function duplicateQuiz(id: string) {
@@ -126,7 +130,7 @@ export async function duplicateQuiz(id: string) {
 		[key: string]: any;
 	} | null;
 	if (!originalQuiz) {
-		return fail(404, { error: 'Quiz not found' });
+		return { success: false, error: 'Quiz not found' };
 	}
 
 	const newQuiz = await db
@@ -164,7 +168,7 @@ export async function duplicateQuiz(id: string) {
 		await db.insert(question).values(questionValues);
 	}
 
-	return { success: true, quiz: newQuiz[0] };
+	return { success: 'Quiz duplicated successfully', quiz: newQuiz[0] };
 }
 
 export async function toggleQuizStatus(formData: FormData) {
@@ -172,7 +176,7 @@ export async function toggleQuizStatus(formData: FormData) {
 	const parsed = quizStatusToggleSchema.safeParse(data);
 
 	if (!parsed.success) {
-		return fail(400, { errors: parsed.error.flatten().fieldErrors });
+		return { success: false, error: 'Invalid data' };
 	}
 
 	const { id, status } = parsed.data;
@@ -181,7 +185,7 @@ export async function toggleQuizStatus(formData: FormData) {
 	if (status === 'active') {
 		const currentQuiz = await getQuizById(id);
 		if (!currentQuiz) {
-			return fail(404, { error: 'Quiz not found' });
+			return { success: false, error: 'Quiz not found' };
 		}
 
 		// Check max 5 active quizzes globally
@@ -191,12 +195,12 @@ export async function toggleQuizStatus(formData: FormData) {
 			.where(eq(quiz.status, 'active'));
 
 		if (activeCount[0].count >= 5) {
-			return fail(400, { error: 'Maximum 5 active quizzes allowed' });
+			return { success: false, error: 'Maximum 5 active quizzes allowed' };
 		}
 
 		// Check max_participants is set
 		if (!currentQuiz.maxParticipants || currentQuiz.maxParticipants <= 0) {
-			return fail(400, { error: 'max_participants must be set before activating' });
+			return { success: false, error: 'max_participants must be set before activating' };
 		}
 	}
 
@@ -217,13 +221,21 @@ export async function createQuestion(formData: FormData) {
 		...data,
 		orderIndex: Number(data.orderIndex),
 		options: data.options ? JSON.parse(data.options as string) : undefined,
-		correctAnswer: data.correctAnswer ? JSON.parse(data.correctAnswer as string) : undefined
 	};
+
+	// Handle correctAnswer based on question type
+	if (data.correctAnswer) {
+		if (data.type === 'mcq_single' || data.type === 'mcq_multi') {
+			processedData.correctAnswer = JSON.parse(data.correctAnswer as string);
+		} else {
+			processedData.correctAnswer = data.correctAnswer as string;
+		}
+	}
 
 	const parsed = questionCreateSchema.safeParse(processedData);
 
 	if (!parsed.success) {
-		return fail(400, { errors: parsed.error.flatten().fieldErrors });
+		return { success: false, error: 'Invalid data' };
 	}
 
 	// Check max 50 questions per quiz
@@ -232,7 +244,7 @@ export async function createQuestion(formData: FormData) {
 	});
 
 	if (quizQuestions.length >= 50) {
-		return fail(400, { error: 'Maximum 50 questions per quiz' });
+		return { success: false, error: 'Maximum 50 questions per quiz' };
 	}
 
 	const newQuestion = await db
@@ -255,13 +267,21 @@ export async function updateQuestion(formData: FormData) {
 		...data,
 		orderIndex: data.orderIndex ? Number(data.orderIndex) : undefined,
 		options: data.options ? JSON.parse(data.options as string) : undefined,
-		correctAnswer: data.correctAnswer ? JSON.parse(data.correctAnswer as string) : undefined
 	};
+
+	// Handle correctAnswer based on question type
+	if (data.correctAnswer) {
+		if (data.type === 'mcq_single' || data.type === 'mcq_multi') {
+			processedData.correctAnswer = JSON.parse(data.correctAnswer as string);
+		} else {
+			processedData.correctAnswer = data.correctAnswer as string;
+		}
+	}
 
 	const parsed = questionUpdateSchema.safeParse(processedData);
 
 	if (!parsed.success) {
-		return fail(400, { errors: parsed.error.flatten().fieldErrors });
+		return { success: false, error: 'Invalid data' };
 	}
 
 	const { id, ...updateData } = parsed.data;

@@ -9,14 +9,12 @@ export const actions = {
 	delete: async ({ request }) => {
 		const formData = await request.formData();
 		const id = formData.get('id') as string;
-		await deleteQuiz(id);
-		return { success: true };
+		return await deleteQuiz(id);
 	},
 	duplicate: async ({ request }) => {
 		const formData = await request.formData();
 		const id = formData.get('id') as string;
-		const result = await duplicateQuiz(id);
-		return result;
+		return await duplicateQuiz(id);
 	},
 	toggleStatus: async ({ request }) => {
 		const formData = await request.formData();

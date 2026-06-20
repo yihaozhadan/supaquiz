@@ -36,7 +36,7 @@ describe('Quiz Constraints', () => {
 	describe('Max 5 Active Quizzes', () => {
 		it('should allow activation when less than 5 active quizzes', async () => {
 			const mockQuiz = {
-				id: 'test-quiz-id',
+				id: '123e4567-e89b-12d3-a456-426614174000',
 				maxParticipants: 100,
 				status: 'draft'
 			};
@@ -56,7 +56,7 @@ describe('Quiz Constraints', () => {
 			} as any);
 
 			const formData = new FormData();
-			formData.append('id', 'test-quiz-id');
+			formData.append('id', '123e4567-e89b-12d3-a456-426614174000');
 			formData.append('status', 'active');
 
 			const result = await toggleQuizStatus(formData);
@@ -66,7 +66,7 @@ describe('Quiz Constraints', () => {
 
 		it('should reject activation when 5 or more active quizzes exist', async () => {
 			const mockQuiz = {
-				id: 'test-quiz-id',
+				id: '123e4567-e89b-12d3-a456-426614174000',
 				maxParticipants: 100,
 				status: 'draft'
 			};
@@ -79,7 +79,7 @@ describe('Quiz Constraints', () => {
 			} as any);
 
 			const formData = new FormData();
-			formData.append('id', 'test-quiz-id');
+			formData.append('id', '123e4567-e89b-12d3-a456-426614174000');
 			formData.append('status', 'active');
 
 			const result = await toggleQuizStatus(formData);
@@ -90,7 +90,7 @@ describe('Quiz Constraints', () => {
 
 		it('should reject activation when max_participants is not set', async () => {
 			const mockQuiz = {
-				id: 'test-quiz-id',
+				id: '123e4567-e89b-12d3-a456-426614174000',
 				maxParticipants: 0,
 				status: 'draft'
 			};
@@ -103,7 +103,7 @@ describe('Quiz Constraints', () => {
 			} as any);
 
 			const formData = new FormData();
-			formData.append('id', 'test-quiz-id');
+			formData.append('id', '123e4567-e89b-12d3-a456-426614174000');
 			formData.append('status', 'active');
 
 			const result = await toggleQuizStatus(formData);
@@ -118,15 +118,15 @@ describe('Quiz Constraints', () => {
 			vi.mocked(db.query.question.findMany).mockResolvedValue([]);
 
 			const formData = new FormData();
-			formData.append('quizId', 'test-quiz-id');
+			formData.append('quizId', '123e4567-e89b-12d3-a456-426614174000');
 			formData.append('type', 'mcq_single');
 			formData.append('text', 'Test question?');
-			formData.append('correctAnswer', 'option1');
+			formData.append('correctAnswer', JSON.stringify('option1'));
 			formData.append('orderIndex', '0');
 
 			vi.mocked(db.insert).mockReturnValue({
 				values: vi.fn().mockReturnValue({
-					returning: vi.fn().mockResolvedValue([{ id: 'new-question-id' }])
+					returning: vi.fn().mockResolvedValue([{ id: '123e4567-e89b-12d3-a456-426614174001' }])
 				})
 			} as any);
 
@@ -137,17 +137,17 @@ describe('Quiz Constraints', () => {
 
 		it('should reject adding question when 50 questions exist', async () => {
 			const mockQuestions = Array.from({ length: 50 }, (_, i) => ({
-				id: `question-${i}`,
-				quizId: 'test-quiz-id'
+				id: `123e4567-e89b-12d3-a456-426614174${String(i).padStart(3, '0')}`,
+				quizId: '123e4567-e89b-12d3-a456-426614174000'
 			}));
 
 			vi.mocked(db.query.question.findMany).mockResolvedValue(mockQuestions as any);
 
 			const formData = new FormData();
-			formData.append('quizId', 'test-quiz-id');
+			formData.append('quizId', '123e4567-e89b-12d3-a456-426614174000');
 			formData.append('type', 'mcq_single');
 			formData.append('text', 'Test question?');
-			formData.append('correctAnswer', 'option1');
+			formData.append('correctAnswer', JSON.stringify('option1'));
 			formData.append('orderIndex', '50');
 
 			const result = await createQuestion(formData);
