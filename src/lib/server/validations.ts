@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const intakeFormFieldSchema = z.object({
 	name: z.string().min(1).max(100),
-	type: z.enum(['text', 'email', 'number']),
+	type: z.enum(['text', 'email', 'number', 'select']),
 	required: z.boolean()
 });
 
@@ -36,13 +36,14 @@ export const questionCreateSchema = z.object({
 	quizId: z.uuid(),
 	type: z.enum(['mcq_single', 'mcq_multi', 'true_false', 'fitb']),
 	text: z.string().min(1).max(2000),
-	mediaUrl: z.url().optional(),
+	mediaUrl: z.string().max(500).optional(),
 	options: z.array(questionOptionSchema).optional(),
 	correctAnswer: z.union([
 		z.string(), // For fitb and true_false
 		z.array(z.string()) // For mcq_multi
 	]),
 	explanation: z.string().max(2000).optional(),
+	codeSnippet: z.string().max(10000).optional(),
 	orderIndex: z.number().int().min(0)
 });
 

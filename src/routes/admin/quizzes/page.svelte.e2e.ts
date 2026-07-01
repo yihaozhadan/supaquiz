@@ -123,7 +123,7 @@ test.describe('Question Editor', () => {
 		await expect(page.locator('h1')).toContainText('Quizzes');
 	});
 
-	test('should add MCQ single choice question', async ({ page }) => {
+	async function createQuizAndOpenEditor(page: any) {
 		await page.goto('/admin/quizzes/new');
 		await page.fill('input[name="title"]', 'Quiz for Questions');
 		await page.fill('textarea[name="description"]', 'Test quiz');
@@ -134,76 +134,80 @@ test.describe('Question Editor', () => {
 		await page.waitForLoadState('networkidle');
 		await expect(page).toHaveURL(/\/admin\/quizzes\/.*\/edit/);
 
-		await page.click('a:has-text("+ Add Question")');
-		await expect(page).toHaveURL(/\/admin\/quizzes\/.*\/questions/);
+		// Switch to Questions tab
+		await page.click('[data-slot="tabs-trigger"]:has-text("Questions")');
+		await page.waitForLoadState('networkidle');
+	}
 
-		await page.selectOption('select[name="type"]', 'mcq_single');
+	test('should add MCQ single choice question via sheet', async ({ page }) => {
+		await createQuizAndOpenEditor(page);
+
+		// Click "Add Question" button to open the sheet
+		await page.click('button:has-text("Add Question")');
+		await expect(page.locator('[data-slot="sheet-content"]')).toBeVisible({ timeout: 5000 });
+
+		// Fill question text
 		await page.fill('textarea[name="text"]', 'What is 2+2?');
 
-		await page.click('button:has-text("+ Add Option")');
-		await page.click('button:has-text("+ Add Option")');
+		// Default type is mcq_single; fill the two default options
+		await page.fill('input[placeholder="Option 1"]', '3');
+		await page.fill('input[placeholder="Option 2"]', '4');
 
-		await page.fill('input[name="options[0].text"]', '3');
-		await page.fill('input[name="options[1].text"]', '4');
-		await page.fill('input[name="options[2].text"]', '5');
+		// Add a third option
+		await page.click('button:has-text("Add Option")');
+		await page.fill('input[placeholder="Option 3"]', '5');
 
-		await page.locator('input[type="radio"]').nth(1).check();
+		// Mark option 2 (index 1) as correct
+		await page.locator('[role="radio"]').nth(1).click();
 
-		await page.locator('form.space-y-6').evaluate((form) => form.submit());
-		await page.waitForURL(/\/questions\?\/create/);
+		// Submit
+		await page.click('button[type="submit"]:has-text("Add Question")');
 		await page.waitForLoadState('networkidle');
+		await expect(page.locator('[data-slot="sheet-content"]')).toBeHidden({ timeout: 10000 });
 
-		await expect(page.locator('.bg-green-50')).toContainText('Question created successfully', { timeout: 10000 });
+		// Question should appear in the list
+		await expect(page.locator('text=What is 2+2?')).toBeVisible({ timeout: 10000 });
 	});
 
-	test('should add true/false question', async ({ page }) => {
-		await page.goto('/admin/quizzes/new');
-		await page.fill('input[name="title"]', 'Quiz for Questions');
-		await page.fill('textarea[name="description"]', 'Test quiz');
-		await page.fill('input[name="maxParticipants"]', '100');
-		await page.fill('input[name="maxAttempts"]', '1');
-		await page.check('input[name="allowBackNavigation"]');
-		await page.locator('form.space-y-6').evaluate((form) => form.submit());
-		await page.waitForLoadState('networkidle');
-		await expect(page).toHaveURL(/\/admin\/quizzes\/.*\/edit/);
+	test('should add true/false question via sheet', async ({ page }) => {
+		await createQuizAndOpenEditor(page);
 
-		await page.click('a:has-text("+ Add Question")');
-		await expect(page).toHaveURL(/\/admin\/quizzes\/.*\/questions/);
+		await page.click('button:has-text("Add Question")');
+		await expect(page.locator('[data-slot="sheet-content"]')).toBeVisible({ timeout: 5000 });
 
-		await page.selectOption('select[name="type"]', 'true_false');
+		// Select True/False type via the select trigger
+		await page.click('[data-slot="select-trigger"]');
+		await page.click('[role="option"]:has-text("True / False")');
+
 		await page.fill('textarea[name="text"]', 'The sky is blue');
 
-		await page.locator('input[value="true"]').check();
+		// Click the "True" answer button
+		await page.click('button[role="radio"]:has-text("True")');
 
-		await page.locator('form.space-y-6').evaluate((form) => form.submit());
-		await page.waitForURL(/\/questions\?\/create/);
+		await page.click('button[type="submit"]:has-text("Add Question")');
 		await page.waitForLoadState('networkidle');
+		await expect(page.locator('[data-slot="sheet-content"]')).toBeHidden({ timeout: 10000 });
 
-		await expect(page.locator('.bg-green-50')).toContainText('Question created successfully', { timeout: 10000 });
+		await expect(page.locator('text=The sky is blue')).toBeVisible({ timeout: 10000 });
 	});
 
-	test('should add fill in the blank question', async ({ page }) => {
-		await page.goto('/admin/quizzes/new');
-		await page.fill('input[name="title"]', 'Quiz for Questions');
-		await page.fill('textarea[name="description"]', 'Test quiz');
-		await page.fill('input[name="maxParticipants"]', '100');
-		await page.fill('input[name="maxAttempts"]', '1');
-		await page.check('input[name="allowBackNavigation"]');
-		await page.locator('form.space-y-6').evaluate((form) => form.submit());
-		await page.waitForLoadState('networkidle');
-		await expect(page).toHaveURL(/\/admin\/quizzes\/.*\/edit/);
+	test('should add fill in the blank question via sheet', async ({ page }) => {
+		await createQuizAndOpenEditor(page);
 
-		await page.click('a:has-text("+ Add Question")');
-		await expect(page).toHaveURL(/\/admin\/quizzes\/.*\/questions/);
+		await page.click('button:has-text("Add Question")');
+		await expect(page.locator('[data-slot="sheet-content"]')).toBeVisible({ timeout: 5000 });
 
-		await page.selectOption('select[name="type"]', 'fitb');
+		// Select Fill in the Blank type
+		await page.click('[data-slot="select-trigger"]');
+		await page.click('[role="option"]:has-text("Fill in the Blank")');
+
 		await page.fill('textarea[name="text"]', 'The capital of France is _____');
 		await page.fill('input[name="correctAnswer"]', 'Paris');
 
-		await page.locator('form.space-y-6').evaluate((form) => form.submit());
-		await page.waitForURL(/\/questions\?\/create/);
+		await page.click('button[type="submit"]:has-text("Add Question")');
 		await page.waitForLoadState('networkidle');
+		await expect(page.locator('[data-slot="sheet-content"]')).toBeHidden({ timeout: 10000 });
 
-		await expect(page.locator('.bg-green-50')).toContainText('Question created successfully', { timeout: 10000 });
+		await expect(page.locator('text=The capital of France is _____')).toBeVisible({ timeout: 10000 });
 	});
 });
