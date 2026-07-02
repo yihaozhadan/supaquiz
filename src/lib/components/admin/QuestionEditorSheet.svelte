@@ -66,8 +66,10 @@
 	let removeMedia = $state(false);
 	let isDragging = $state(false);
 	let mediaError = $state<string | null>(null);
+	let imageLoadError = $state(false);
 	let isSubmitting = $state(false);
 	let submitError = $state<string | null>(null);
+	let fileInput = $state<HTMLInputElement | null>(null);
 
 	const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 	const ALLOWED_MIME_TYPES = [
@@ -110,6 +112,10 @@
 				mediaFile = null;
 				removeMedia = false;
 				mediaError = null;
+				imageLoadError = false;
+				if (fileInput) {
+					fileInput.value = '';
+				}
 
 				if (question.type === 'mcq_single' || question.type === 'mcq_multi') {
 					options = question.options?.length
@@ -156,6 +162,10 @@
 		mediaFile = null;
 		removeMedia = false;
 		mediaError = null;
+		imageLoadError = false;
+		if (fileInput) {
+			fileInput.value = '';
+		}
 	}
 
 	function addOption() {
@@ -199,6 +209,7 @@
 		mediaFileName = file.name;
 		mediaUrl = null; // preview will be replaced
 		removeMedia = false;
+		imageLoadError = false;
 	}
 
 	function handleFileInput(e: Event) {
@@ -228,13 +239,18 @@
 		mediaFileName = null;
 		mediaUrl = null;
 		mediaError = null;
+		imageLoadError = false;
+		if (fileInput) {
+			fileInput.value = '';
+		}
 		if (question?.mediaUrl) {
 			removeMedia = true;
 		}
 	}
 
 	const mediaIsImage = $derived(
-		mediaUrl && /\.(jpg|jpeg|png|gif|webp)$/i.test(mediaUrl)
+		(mediaFile && mediaFile.type.startsWith('image/')) ||
+		(mediaUrl && !mediaFile && /\.(jpg|jpeg|png|gif|webp)$/i.test(mediaUrl))
 	);
 
 	const correctAnswerValue = $derived.by(() => {
@@ -493,12 +509,23 @@
 			<!-- Media Upload -->
 			<div class="space-y-2">
 				<Label>Media Attachment (optional)</Label>
-				{#if mediaUrl || (mediaFile && mediaFile.type.startsWith('image/'))}
+				<!-- The file input is always rendered so the selected file stays
+				     attached to the form even after the preview replaces the drop zone. -->
+				<input
+					bind:this={fileInput}
+					type="file"
+					name="media"
+					class="sr-only"
+					accept="image/*,audio/*,video/*"
+					onchange={handleFileInput}
+				/>
+				{#if mediaIsImage && !imageLoadError}
 					<div class="relative rounded-lg border border-border overflow-hidden bg-muted/30">
 						<img
 							src={mediaFile ? URL.createObjectURL(mediaFile) : mediaUrl!}
 							alt="Media preview"
 							class="w-full max-h-48 object-contain"
+							onerror={() => { if (!mediaFile) imageLoadError = true; }}
 						/>
 						<button
 							type="button"
@@ -509,14 +536,20 @@
 							<X class="size-4" />
 						</button>
 					</div>
-				{:else if mediaFileName || mediaUrl}
+				{:else if mediaFile || mediaUrl}
 					<div class="flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3">
 						<FileImage class="size-8 text-muted-foreground shrink-0" />
 						<div class="flex-1 min-w-0">
 							<p class="text-sm font-medium text-foreground truncate">
 								{mediaFileName || mediaUrl?.split('/').pop()}
 							</p>
-							<p class="text-xs text-muted-foreground">Current media file</p>
+							<p class="text-xs text-muted-foreground">
+								{#if imageLoadError}
+									Image failed to load — re-upload to restore
+								{:else}
+									Current media file
+								{/if}
+							</p>
 						</div>
 						<button
 							type="button"
@@ -534,10 +567,11 @@
 						ondragover={handleDragOver}
 						ondragleave={handleDragLeave}
 						ondrop={handleDrop}
+						onclick={() => fileInput?.click()}
 						onkeydown={(e) => {
 							if (e.key === 'Enter' || e.key === ' ') {
 								e.preventDefault();
-								(e.currentTarget as HTMLElement).querySelector('input')?.click();
+								fileInput?.click();
 							}
 						}}
 						class="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 text-center transition-colors cursor-pointer {isDragging
@@ -551,13 +585,6 @@
 						<p class="text-xs text-muted-foreground">
 							Images, audio, or video (max 50MB)
 						</p>
-						<input
-							type="file"
-							name="media"
-							class="sr-only"
-							accept="image/*,audio/*,video/*"
-							onchange={handleFileInput}
-						/>
 					</div>
 				{/if}
 				{#if mediaError}

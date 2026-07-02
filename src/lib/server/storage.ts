@@ -1,7 +1,6 @@
-import { mkdir, writeFile } from 'fs/promises';
-import { join } from 'path';
+import { mkdir, writeFile, unlink, rmdir } from 'fs/promises';
+import { join, dirname, sep } from 'path';
 import { env } from '$env/dynamic/private';
-import { fail } from '@sveltejs/kit';
 
 const DATA_DIR = env.DATA_DIR || './data';
 const UPLOADS_DIR = join(DATA_DIR, 'uploads');
@@ -27,9 +26,15 @@ export async function ensureUploadDir() {
 	}
 }
 
+/**
+ * Save an uploaded media file for a quiz question.
+ *
+ * Files are stored at: `uploads/quizzes/<quizId>/<fileUuid>.<ext>`
+ * The quizId grouping keeps related files together without deep UUID nesting.
+ * The stored mediaUrl is the path relative to DATA_DIR (with leading slash).
+ */
 export async function saveQuestionMedia(
 	quizId: string,
-	questionId: string,
 	file: File
 ): Promise<string> {
 	await ensureUploadDir();
@@ -44,10 +49,10 @@ export async function saveQuestionMedia(
 		throw new Error(`File type ${file.type} is not allowed`);
 	}
 
-	// Generate UUIDv7 filename
+	// Generate UUID filename
 	const fileExt = file.name.split('.').pop() || 'bin';
 	const fileName = `${crypto.randomUUID()}.${fileExt}`;
-	const quizDir = join(UPLOADS_DIR, 'quizzes', quizId, 'questions', questionId);
+	const quizDir = join(UPLOADS_DIR, 'quizzes', quizId);
 
 	await mkdir(quizDir, { recursive: true });
 	const filePath = join(quizDir, fileName);
@@ -57,14 +62,43 @@ export async function saveQuestionMedia(
 	await writeFile(filePath, buffer);
 
 	// Return relative path for storage in database
-	return `/uploads/quizzes/${quizId}/questions/${questionId}/${fileName}`;
+	return `/uploads/quizzes/${quizId}/${fileName}`;
 }
 
+/**
+ * Delete a media file from disk and clean up empty parent directories.
+ * Walks upward from the file's parent, removing empty directories until
+ * reaching the uploads root or a non-empty directory.
+ */
 export async function deleteQuestionMedia(mediaUrl: string): Promise<void> {
-	// This would delete the file from disk
-	// For now, we'll implement a placeholder
-	// In production, you'd want to use fs.unlink and handle errors
-	console.log(`Would delete file: ${mediaUrl}`);
+	const absolutePath = join(DATA_DIR, mediaUrl);
+
+	// Safety: ensure the path is inside UPLOADS_DIR
+	const normalizedUploads = join(UPLOADS_DIR);
+	if (
+		absolutePath !== normalizedUploads &&
+		!absolutePath.startsWith(normalizedUploads + sep)
+	) {
+		console.warn(`Invalid mediaUrl path outside UPLOADS_DIR: ${mediaUrl}`);
+		return;
+	}
+
+	try {
+		await unlink(absolutePath);
+	} catch {
+		// File may already be gone; continue to clean up empty dirs
+	}
+
+	// Clean up empty parent directories up to (but not including) UPLOADS_DIR
+	let dir = dirname(absolutePath);
+	while (dir !== normalizedUploads && dir.startsWith(normalizedUploads + sep)) {
+		try {
+			await rmdir(dir); // fails if not empty — that's what we want
+		} catch {
+			break; // directory not empty, stop cleanup
+		}
+		dir = dirname(dir);
+	}
 }
 
 export function getMediaPath(mediaUrl: string): string {

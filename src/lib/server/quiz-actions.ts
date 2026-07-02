@@ -265,7 +265,7 @@ export async function createQuestion(formData: FormData) {
 	// Handle media upload after the question exists so we can use its id
 	if (mediaFile && mediaFile.size > 0 && mediaFile.name) {
 		try {
-			const mediaUrl = await saveQuestionMedia(parsed.data.quizId, newQuestion[0].id, mediaFile);
+			const mediaUrl = await saveQuestionMedia(parsed.data.quizId, mediaFile);
 			const updated = await db
 				.update(question)
 				.set({ mediaUrl })
@@ -342,7 +342,7 @@ export async function updateQuestion(formData: FormData) {
 				await deleteQuestionMedia(updatedQuestion[0].mediaUrl);
 			}
 			const targetQuizId = quizId || updatedQuestion[0].quizId;
-			const mediaUrl = await saveQuestionMedia(targetQuizId, id, mediaFile);
+			const mediaUrl = await saveQuestionMedia(targetQuizId, mediaFile);
 			const withMedia = await db
 				.update(question)
 				.set({ mediaUrl })
