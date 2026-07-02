@@ -1,4 +1,4 @@
-import { eq, desc, count, and } from 'drizzle-orm';
+import { eq, desc, count, and, inArray } from 'drizzle-orm';
 import { db } from './db';
 import { quiz, question, attempt } from './db/schema';
 import {
@@ -20,11 +20,13 @@ export async function getQuizzes() {
 	const questionCounts = await db
 		.select({ quizId: question.quizId, count: count() })
 		.from(question)
-		.where(eq(question.quizId, quizIds[0] || '')); // Simplified for now
+		.where(inArray(question.quizId, quizIds));
+
+	const questionCountMap = new Map(questionCounts.map((qc) => [qc.quizId, qc.count]));
 
 	return quizzes.map((q) => ({
 		...q,
-		questionCount: 0, // Will be calculated properly after fixing relations
+		questionCount: questionCountMap.get(q.id) ?? 0,
 		attemptCount: 0,
 		activeParticipantCount: 0
 	}));
