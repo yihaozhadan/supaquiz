@@ -36,6 +36,7 @@ export const quiz = sqliteTable('quiz', {
 	status: text('status', { enum: ['draft', 'active', 'expired'] })
 		.notNull()
 		.default('draft'),
+	isPublic: integer('is_public', { mode: 'boolean' }).notNull().default(true),
 	activateAt: integer('activate_at', { mode: 'timestamp' }),
 	expireAt: integer('expire_at', { mode: 'timestamp' }),
 	createdAt: integer('created_at', { mode: 'timestamp' })

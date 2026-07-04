@@ -1,30 +1,34 @@
 <script lang="ts">
+	import { ArrowRight, Search as SearchIcon } from 'lucide-svelte';
+	import HeroSection from '$lib/components/public/HeroSection.svelte';
+	import FeatureHighlights from '$lib/components/public/FeatureHighlights.svelte';
+	import QuizCard from '$lib/components/public/QuizCard.svelte';
+	import SearchBar from '$lib/components/public/SearchBar.svelte';
+	import EmptyState from '$lib/components/public/EmptyState.svelte';
+	import { Skeleton } from '$lib/components/ui/skeleton';
 	import { buttonVariants } from '$lib/components/ui/button';
-	import { ListChecks, ArrowRight, ShieldCheck, PenLine, FileText, Info } from 'lucide-svelte';
+	import type { PageData } from './$types';
 
-	const features = [
-		{
-			icon: ShieldCheck,
-			title: 'Self-Hosted & Private',
-			description: 'Run quizzes on your own infrastructure. Participant data never leaves your server.'
-		},
-		{
-			icon: PenLine,
-			title: 'Easy Quiz Builder',
-			description: 'Create MCQ, true/false, and fill-in-the-blank questions with media and code snippets.'
-		},
-		{
-			icon: ListChecks,
-			title: 'Auto-Grading',
-			description: 'Objective questions are graded instantly. Review results with rich per-attempt detail.'
-		}
-	];
+	let { data }: { data: PageData } = $props();
 
-	const links = [
-		{ href: '/quizzes', label: 'Browse Quizzes', icon: ListChecks, description: 'Take a quiz or view what is available.' },
-		{ href: '/docs', label: 'Documentation', icon: FileText, description: 'Learn how to take part and submit a quiz.' },
-		{ href: '/about', label: 'About SupaQuiz', icon: Info, description: 'The story behind this open-source project.' }
-	];
+	let searchQuery = $state('');
+	let loading = $state(false);
+
+	const filteredQuizzes = $derived(
+		searchQuery.trim()
+			? data.quizzes.filter((q) =>
+					`${q.title} ${q.description}`.toLowerCase().includes(searchQuery.trim().toLowerCase())
+				)
+			: data.quizzes
+	);
+
+	function handleSearch(value: string) {
+		loading = true;
+		searchQuery = value;
+		// Filtering is instant (client-side over the preloaded homepage set);
+		// the loading flicker is intentionally brief to signal activity.
+		setTimeout(() => (loading = false), 150);
+	}
 </script>
 
 <svelte:head>
@@ -35,70 +39,72 @@
 	/>
 </svelte:head>
 
-<section class="relative overflow-hidden border-b">
-	<div
-		class="absolute inset-0 -z-10 bg-gradient-to-b from-secondary via-secondary/50 to-background"
-		aria-hidden="true"
-	></div>
-	<div class="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
-		<div class="mx-auto max-w-3xl text-center">
-			<span
-				class="inline-flex items-center rounded-full border bg-background px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm"
-			>
-				Open-source · Self-hosted · Privacy-first
-			</span>
-			<h1 class="mt-6 text-4xl font-bold tracking-tight text-balance sm:text-5xl lg:text-6xl">
-				Run quizzes on your own terms
-			</h1>
-			<p class="mt-5 text-lg text-muted-foreground text-pretty sm:text-xl">
-				SupaQuiz is a lightweight quiz platform you host yourself. Build quizzes with multiple question
-				types, collect participant responses, and auto-grade results — all without sending data to a
-				third party.
-			</p>
-			<div class="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-				<a href="/quizzes" class={buttonVariants({ size: 'lg' })}>
-					Browse Quizzes
-					<ArrowRight class="ml-2 h-4 w-4" />
-				</a>
-				<a href="/docs" class={buttonVariants({ variant: 'outline', size: 'lg' })}>
-					Read the Docs
-				</a>
-			</div>
+<HeroSection />
+
+<FeatureHighlights />
+
+<section class="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
+	<div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+		<div>
+			<h2 class="text-2xl font-semibold tracking-tight sm:text-3xl">Available Quizzes</h2>
+			<p class="mt-2 text-muted-foreground">Jump into a quiz that's open right now.</p>
 		</div>
+		<a
+			href="/quizzes"
+			class="hidden items-center text-sm font-medium text-primary hover:underline sm:inline-flex"
+		>
+			View all quizzes
+			<ArrowRight class="ml-1 h-4 w-4" />
+		</a>
 	</div>
-</section>
 
-<section class="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
-	<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-		{#each features as feature}
-			<div class="rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
-				<feature.icon class="h-8 w-8 text-primary" />
-				<h2 class="mt-4 text-lg font-semibold">{feature.title}</h2>
-				<p class="mt-2 text-sm text-muted-foreground">{feature.description}</p>
+	<div class="mt-6 max-w-md">
+		<SearchBar
+			placeholder="Search available quizzes..."
+			onSearch={handleSearch}
+			{loading}
+		/>
+	</div>
+
+	<div class="mt-8">
+		{#if loading}
+			<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+				{#each Array(3) as _}
+					<div class="space-y-3 rounded-lg border p-6">
+						<Skeleton class="h-5 w-3/4" />
+						<Skeleton class="h-4 w-full" />
+						<Skeleton class="h-4 w-2/3" />
+						<Skeleton class="mt-4 h-9 w-full" />
+					</div>
+				{/each}
 			</div>
-		{/each}
+		{:else if filteredQuizzes.length === 0 && data.quizzes.length === 0}
+			<EmptyState
+				icon={SearchIcon}
+				title="No quizzes available yet"
+				description="Check back soon — the admin hasn't published any quizzes."
+			/>
+		{:else if filteredQuizzes.length === 0}
+			<EmptyState
+				icon={SearchIcon}
+				title="No quizzes found"
+				description="Try a different search term, or browse the full directory."
+				actionLabel="Browse All Quizzes"
+				actionHref="/quizzes"
+			/>
+		{:else}
+			<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+				{#each filteredQuizzes as quiz (quiz.id)}
+					<QuizCard {...quiz} />
+				{/each}
+			</div>
+		{/if}
 	</div>
-</section>
 
-<section class="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:px-8">
-	<h2 class="text-2xl font-semibold tracking-tight">Get started</h2>
-	<div class="mt-6 grid gap-4 sm:grid-cols-3">
-		{#each links as link}
-			<a
-				href={link.href}
-				class="group flex flex-col gap-2 rounded-lg border bg-card p-5 transition-colors hover:border-primary/50 hover:bg-accent"
-			>
-				<div class="flex items-center gap-2">
-					<link.icon class="h-5 w-5 text-primary" />
-					<span class="font-medium">{link.label}</span>
-				</div>
-				<p class="text-sm text-muted-foreground">{link.description}</p>
-				<span
-					class="mt-2 inline-flex items-center text-sm font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100"
-				>
-					Open {link.label.toLowerCase()} <ArrowRight class="ml-1 h-3 w-3" />
-				</span>
-			</a>
-		{/each}
+	<div class="mt-8 text-center sm:hidden">
+		<a href="/quizzes" class={buttonVariants({ variant: 'outline', class: 'min-h-11 w-full' })}>
+			View all quizzes
+			<ArrowRight class="ml-2 h-4 w-4" />
+		</a>
 	</div>
 </section>
