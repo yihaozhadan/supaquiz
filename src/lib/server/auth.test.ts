@@ -56,7 +56,7 @@ describe('Session Helpers', () => {
 				expect.any(String),
 				expect.objectContaining({
 					httpOnly: true,
-					path: '/admin',
+					path: '/',
 					sameSite: 'lax'
 				})
 			);
@@ -106,7 +106,7 @@ describe('Session Helpers', () => {
 			deleteSession(mockCookies);
 
 			expect(mockCookies.delete).toHaveBeenCalledWith('admin_session', {
-				path: '/admin'
+				path: '/'
 			});
 		});
 	});

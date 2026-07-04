@@ -1,4 +1,4 @@
-import { eq, desc, count, and } from 'drizzle-orm';
+import { eq, desc, count, and, inArray } from 'drizzle-orm';
 import { db } from './db';
 import { quiz, question, attempt } from './db/schema';
 import {
@@ -8,6 +8,7 @@ import {
 	questionCreateSchema,
 	questionUpdateSchema
 } from './validations';
+import { saveQuestionMedia, deleteQuestionMedia } from './storage';
 
 export async function getQuizzes() {
 	const quizzes = await db.query.quiz.findMany({
@@ -19,11 +20,13 @@ export async function getQuizzes() {
 	const questionCounts = await db
 		.select({ quizId: question.quizId, count: count() })
 		.from(question)
-		.where(eq(question.quizId, quizIds[0] || '')); // Simplified for now
+		.where(inArray(question.quizId, quizIds));
+
+	const questionCountMap = new Map(questionCounts.map((qc) => [qc.quizId, qc.count]));
 
 	return quizzes.map((q) => ({
 		...q,
-		questionCount: 0, // Will be calculated properly after fixing relations
+		questionCount: questionCountMap.get(q.id) ?? 0,
 		attemptCount: 0,
 		activeParticipantCount: 0
 	}));
@@ -162,6 +165,7 @@ export async function duplicateQuiz(id: string) {
 			options: q.options ? JSON.stringify(q.options) : null,
 			correctAnswer: JSON.stringify(q.correctAnswer),
 			explanation: q.explanation,
+			codeSnippet: q.codeSnippet,
 			orderIndex: q.orderIndex
 		}));
 
@@ -215,12 +219,14 @@ export async function toggleQuizStatus(formData: FormData) {
 
 export async function createQuestion(formData: FormData) {
 	const data = Object.fromEntries(formData);
+	const mediaFile = formData.get('media') as File | null;
 
 	// Convert string numbers to actual numbers
-	const processedData = {
+	const processedData: Record<string, unknown> = {
 		...data,
 		orderIndex: Number(data.orderIndex),
 		options: data.options ? JSON.parse(data.options as string) : undefined,
+		codeSnippet: data.codeSnippet ? (data.codeSnippet as string) : undefined
 	};
 
 	// Handle correctAnswer based on question type
@@ -256,17 +262,38 @@ export async function createQuestion(formData: FormData) {
 		})
 		.returning();
 
+	// Handle media upload after the question exists so we can use its id
+	if (mediaFile && mediaFile.size > 0 && mediaFile.name) {
+		try {
+			const mediaUrl = await saveQuestionMedia(parsed.data.quizId, mediaFile);
+			const updated = await db
+				.update(question)
+				.set({ mediaUrl })
+				.where(eq(question.id, newQuestion[0].id))
+				.returning();
+			return { success: true, question: updated[0] };
+		} catch (err) {
+			return {
+				success: false,
+				error: err instanceof Error ? err.message : 'Failed to save media file'
+			};
+		}
+	}
+
 	return { success: true, question: newQuestion[0] };
 }
 
 export async function updateQuestion(formData: FormData) {
 	const data = Object.fromEntries(formData);
+	const mediaFile = formData.get('media') as File | null;
+	const removeMedia = formData.get('removeMedia') === 'on';
 
 	// Convert string numbers to actual numbers
-	const processedData = {
+	const processedData: Record<string, unknown> = {
 		...data,
 		orderIndex: data.orderIndex ? Number(data.orderIndex) : undefined,
 		options: data.options ? JSON.parse(data.options as string) : undefined,
+		codeSnippet: data.codeSnippet ? (data.codeSnippet as string) : undefined
 	};
 
 	// Handle correctAnswer based on question type
@@ -284,7 +311,7 @@ export async function updateQuestion(formData: FormData) {
 		return { success: false, error: 'Invalid data' };
 	}
 
-	const { id, ...updateData } = parsed.data;
+	const { id, quizId, ...updateData } = parsed.data;
 
 	const updatedQuestion = await db
 		.update(question)
@@ -295,6 +322,40 @@ export async function updateQuestion(formData: FormData) {
 		})
 		.where(eq(question.id, id))
 		.returning();
+
+	// Handle media replacement / removal
+	if (removeMedia) {
+		if (updatedQuestion[0].mediaUrl) {
+			await deleteQuestionMedia(updatedQuestion[0].mediaUrl);
+		}
+		const cleared = await db
+			.update(question)
+			.set({ mediaUrl: null })
+			.where(eq(question.id, id))
+			.returning();
+		return { success: true, question: cleared[0] };
+	}
+
+	if (mediaFile && mediaFile.size > 0 && mediaFile.name) {
+		try {
+			if (updatedQuestion[0].mediaUrl) {
+				await deleteQuestionMedia(updatedQuestion[0].mediaUrl);
+			}
+			const targetQuizId = quizId || updatedQuestion[0].quizId;
+			const mediaUrl = await saveQuestionMedia(targetQuizId, mediaFile);
+			const withMedia = await db
+				.update(question)
+				.set({ mediaUrl })
+				.where(eq(question.id, id))
+				.returning();
+			return { success: true, question: withMedia[0] };
+		} catch (err) {
+			return {
+				success: false,
+				error: err instanceof Error ? err.message : 'Failed to save media file'
+			};
+		}
+	}
 
 	return { success: true, question: updatedQuestion[0] };
 }
@@ -310,5 +371,38 @@ export async function reorderQuestions(quizId: string, questionIds: string[]) {
 	);
 
 	await Promise.all(updates);
+	return { success: true };
+}
+
+export async function moveQuestion(questionId: string, direction: 'up' | 'down') {
+	const currentQuestion = await db.query.question.findFirst({
+		where: eq(question.id, questionId)
+	});
+	if (!currentQuestion) {
+		return { success: false, error: 'Question not found' };
+	}
+
+	const adjacentQuestion = await db.query.question.findFirst({
+		where: and(
+			eq(question.quizId, currentQuestion.quizId),
+			direction === 'up'
+				? eq(question.orderIndex, currentQuestion.orderIndex - 1)
+				: eq(question.orderIndex, currentQuestion.orderIndex + 1)
+		)
+	});
+
+	if (!adjacentQuestion) {
+		return { success: false, error: 'Cannot move question further' };
+	}
+
+	await db
+		.update(question)
+		.set({ orderIndex: adjacentQuestion.orderIndex })
+		.where(eq(question.id, currentQuestion.id));
+	await db
+		.update(question)
+		.set({ orderIndex: currentQuestion.orderIndex })
+		.where(eq(question.id, adjacentQuestion.id));
+
 	return { success: true };
 }

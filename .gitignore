@@ -1,7 +1,7 @@
+.devin
 coverage
 data
 node_modules
-secrets
 
 # Output
 .output
@@ -10,6 +10,7 @@ secrets
 .wrangler
 /.svelte-kit
 /build
+graphify-out
 
 # OS
 .DS_Store

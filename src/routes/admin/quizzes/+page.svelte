@@ -1,214 +1,252 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { page } from '$app/stores';
 	import { invalidateAll } from '$app/navigation';
+	import { Button } from '$lib/components/ui/button';
+	import { Input } from '$lib/components/ui/input';
+	import { Badge } from '$lib/components/ui/badge';
+	import { DataTable } from '$lib/components/ui/data-table';
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+	import * as AlertDialog from '$lib/components/ui/alert-dialog';
+	import * as Select from '$lib/components/ui/select';
+	import PageHeader from '$lib/components/admin/PageHeader.svelte';
+	import EmptyState from '$lib/components/admin/EmptyState.svelte';
+	import { toasts } from '$lib/components/admin/toast';
+	import {
+		MoreHorizontal,
+		Pencil,
+		Copy,
+		Trash2,
+		BarChart3,
+		Download,
+		Plus,
+		Search
+	} from 'lucide-svelte';
 
 	let { data, form } = $props();
 
-	const statusColors: Record<string, string> = {
-		draft: 'bg-gray-100 text-gray-800',
-		active: 'bg-green-100 text-green-800',
-		expired: 'bg-red-100 text-red-800'
+	$effect(() => {
+		if (form?.error) toasts.error(form.error);
+		if (form?.success) toasts.success(String(form.success));
+	});
+
+	let searchQuery = $state('');
+	let statusFilter = $state('all');
+	let sortColumn = $state<string | null>(null);
+	let sortDirection = $state<'asc' | 'desc' | null>(null);
+	let currentPage = $state(1);
+	let pageSize = $state(10);
+	let deleteDialogOpen = $state(false);
+	let quizToDelete = $state<{ id: string; title: string } | null>(null);
+
+	interface Quiz {
+		id: string;
+		title: string;
+		description: string | null;
+		status: string;
+		questionCount: number;
+		attemptCount: number;
+		createdAt: string;
+	}
+
+	const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+		draft: 'secondary',
+		active: 'default',
+		expired: 'destructive'
 	};
 
-	async function handleAction(event: Event, action: string) {
-		event.preventDefault();
+	const statusLabels: Record<string, string> = {
+		draft: 'Draft',
+		active: 'Active',
+		expired: 'Expired'
+	};
+
+	let filteredQuizzes = $derived(
+		data.quizzes.filter((quiz) => {
+			const matchesSearch =
+				quiz.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+				(quiz.description && quiz.description.toLowerCase().includes(searchQuery.toLowerCase()));
+			const matchesStatus = statusFilter === 'all' || quiz.status === statusFilter;
+			return matchesSearch && matchesStatus;
+		})
+	);
+
+	let columns = [
+		{ id: 'title', header: 'Title', sortable: true },
+		{ id: 'status', header: 'Status', sortable: true, class: 'w-32' },
+		{ id: 'questionCount', header: 'Questions', sortable: true, class: 'w-24' },
+		{ id: 'attemptCount', header: 'Attempts', sortable: true, class: 'w-24' },
+		{ id: 'createdAt', header: 'Created', sortable: true, class: 'w-32' },
+		{ id: 'actions', header: '', class: 'w-16 text-right', headerClass: 'text-right' }
+	];
+
+	function handleDeleteClick(quiz: { id: string; title: string }) {
+		quizToDelete = quiz;
+		deleteDialogOpen = true;
 	}
 </script>
 
-<div class="min-h-screen bg-gray-50">
-	<nav class="bg-white shadow">
-		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-			<div class="flex justify-between h-16">
-				<div class="flex">
-					<div class="flex-shrink-0 flex items-center">
-						<a href="/admin" class="text-xl font-bold text-gray-900 hover:text-gray-700">
-							Admin Dashboard
-						</a>
-					</div>
-				</div>
-				<div class="flex items-center">
-					<span class="mr-4 text-sm text-gray-700">
-						Logged in as: {$page.data.admin?.username}
-					</span>
-					<form method="POST" action="/admin/logout">
-						<button
-							type="submit"
-							class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-						>
-							Logout
-						</button>
-					</form>
-				</div>
-			</div>
-		</div>
-	</nav>
+<PageHeader title="Quizzes" description="Manage your quizzes and track participant engagement">
+	<Button href="/admin/quizzes/new">
+		<Plus class="size-4 mr-2" />
+		New Quiz
+	</Button>
+</PageHeader>
 
-	<main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-		<div class="px-4 py-6 sm:px-0">
-			<div class="flex justify-between items-center mb-6">
-				<h1 class="text-2xl font-bold text-gray-900">Quizzes</h1>
-				<a
-					href="/admin/quizzes/new"
-					class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-				>
-					Create Quiz
-				</a>
-			</div>
+<!-- Toolbar -->
+<div class="flex items-center gap-4 mb-6">
+	<div class="relative flex-1 max-w-sm">
+		<Search class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+		<Input
+			type="text"
+			placeholder="Search quizzes..."
+			class="pl-9"
+			bind:value={searchQuery}
+			oninput={() => {
+				currentPage = 1;
+			}}
+		/>
+	</div>
 
-			{#if form?.error}
-				<div class="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-					{form.error}
-				</div>
-			{/if}
-
-			{#if form?.success}
-				<div class="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
-					{form.success}
-				</div>
-			{/if}
-
-			<div class="bg-white shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
-				<table class="min-w-full divide-y divide-gray-200">
-					<thead class="bg-gray-50">
-						<tr>
-							<th
-								scope="col"
-								class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-							>
-								Title
-							</th>
-							<th
-								scope="col"
-								class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-							>
-								Status
-							</th>
-							<th
-								scope="col"
-								class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-							>
-								Questions
-							</th>
-							<th
-								scope="col"
-								class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-							>
-								Attempts
-							</th>
-							<th
-								scope="col"
-								class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-							>
-								Participants
-							</th>
-							<th
-								scope="col"
-								class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-							>
-								Created
-							</th>
-							<th
-								scope="col"
-								class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
-							>
-								Actions
-							</th>
-						</tr>
-					</thead>
-					<tbody class="bg-white divide-y divide-gray-200">
-						{#each data.quizzes as quiz}
-							<tr>
-								<td class="px-6 py-4 whitespace-nowrap">
-									<div class="text-sm font-medium text-gray-900">{quiz.title}</div>
-									<div class="text-sm text-gray-500">{quiz.description}</div>
-								</td>
-								<td class="px-6 py-4 whitespace-nowrap">
-									<span
-										class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {statusColors[quiz.status]}"
-									>
-										{quiz.status}
-									</span>
-								</td>
-								<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-									{quiz.questionCount}
-								</td>
-								<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-									{quiz.attemptCount}
-								</td>
-								<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-									{quiz.activeParticipantCount}
-								</td>
-								<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-									{new Date(quiz.createdAt).toLocaleDateString()}
-								</td>
-								<td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-									<div class="flex justify-end space-x-2">
-										<a
-											href="/admin/quizzes/{quiz.id}/edit"
-											class="text-blue-600 hover:text-blue-900"
-										>
-											Edit
-										</a>
-										{#if quiz.status === 'draft'}
-											<form method="POST" action="?/toggleStatus" class="inline">
-												<input type="hidden" name="id" value={quiz.id} />
-												<input type="hidden" name="status" value="active" />
-												<button
-													type="submit"
-													class="text-green-600 hover:text-green-900"
-												>
-													Activate
-												</button>
-											</form>
-										{:else if quiz.status === 'active'}
-											<form method="POST" action="?/toggleStatus" class="inline">
-												<input type="hidden" name="id" value={quiz.id} />
-												<input type="hidden" name="status" value="draft" />
-												<button
-													type="submit"
-													class="text-yellow-600 hover:text-yellow-900"
-												>
-													Deactivate
-												</button>
-											</form>
-										{/if}
-										<form method="POST" action="?/duplicate" class="inline">
-											<input type="hidden" name="id" value={quiz.id} />
-											<button
-												type="submit"
-												class="text-purple-600 hover:text-purple-900"
-											>
-												Duplicate
-											</button>
-										</form>
-										<form method="POST" action="?/delete" class="inline">
-											<input type="hidden" name="id" value={quiz.id} />
-											<button
-												type="submit"
-												class="text-red-600 hover:text-red-900"
-												onclick={(e) => {
-													if (!confirm('Are you sure you want to delete this quiz?')) {
-														e.preventDefault();
-													}
-												}}
-											>
-												Delete
-											</button>
-										</form>
-									</div>
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-
-				{#if data.quizzes.length === 0}
-					<div class="text-center py-12">
-						<p class="text-gray-500">No quizzes found. Create your first quiz!</p>
-					</div>
-				{/if}
-			</div>
-		</div>
-	</main>
+	<Select.Root
+		type="single"
+		bind:value={statusFilter}
+		onValueChange={() => {
+			currentPage = 1;
+		}}
+	>
+		<Select.Trigger class="w-40">
+			{statusFilter === 'all' ? 'All Status' : statusLabels[statusFilter]}
+		</Select.Trigger>
+		<Select.Content>
+			<Select.Item value="all">All Status</Select.Item>
+			<Select.Item value="draft">Draft</Select.Item>
+			<Select.Item value="active">Active</Select.Item>
+			<Select.Item value="expired">Expired</Select.Item>
+		</Select.Content>
+	</Select.Root>
 </div>
+
+{#if filteredQuizzes.length === 0}
+	<EmptyState
+		title={searchQuery || statusFilter !== 'all' ? 'No quizzes match your filters' : 'No quizzes yet'}
+		description={searchQuery || statusFilter !== 'all'
+			? 'Try adjusting your search or filter criteria.'
+			: 'Create your first quiz to get started.'}
+		actionLabel={!searchQuery && statusFilter === 'all' ? 'Create Quiz' : undefined}
+		actionHref={!searchQuery && statusFilter === 'all' ? '/admin/quizzes/new' : undefined}
+	/>
+{:else}
+	<DataTable
+		{columns}
+		data={filteredQuizzes}
+		bind:sortColumn
+		bind:sortDirection
+		bind:pageSize
+		bind:currentPage
+	>
+		{#snippet cell({ row: quiz, column })}
+			{#if column.id === 'title'}
+				<div>
+					<div class="font-medium text-foreground">{quiz.title}</div>
+					{#if quiz.description}
+						<div class="text-muted-foreground text-xs truncate max-w-xs">{quiz.description}</div>
+					{/if}
+				</div>
+			{:else if column.id === 'status'}
+				<Badge variant={statusColors[quiz.status]}>
+					{statusLabels[quiz.status]}
+				</Badge>
+			{:else if column.id === 'questionCount'}
+				{quiz.questionCount}
+			{:else if column.id === 'attemptCount'}
+				{quiz.attemptCount}
+			{:else if column.id === 'createdAt'}
+				{new Date(quiz.createdAt).toLocaleDateString()}
+			{:else if column.id === 'actions'}
+				<div class="flex justify-end">
+					<DropdownMenu.DropdownMenu>
+						<DropdownMenu.Trigger>
+							<Button variant="ghost" size="icon-sm">
+								<MoreHorizontal class="size-4" />
+								<span class="sr-only">Actions</span>
+							</Button>
+						</DropdownMenu.Trigger>
+						<DropdownMenu.Content align="end">
+							<a href="/admin/quizzes/{quiz.id}/edit" class="contents">
+								<DropdownMenu.Item>
+									<Pencil class="size-4 mr-2" />
+									Edit
+								</DropdownMenu.Item>
+							</a>
+							<a href="/admin/quizzes/{quiz.id}/results" class="contents">
+								<DropdownMenu.Item>
+									<BarChart3 class="size-4 mr-2" />
+									View Results
+								</DropdownMenu.Item>
+							</a>
+							<DropdownMenu.Separator />
+							<DropdownMenu.Item>
+								<form method="POST" action="?/duplicate" class="w-full">
+									<input type="hidden" name="id" value={quiz.id} />
+									<button type="submit" class="flex items-center w-full">
+										<Copy class="size-4 mr-2" />
+										Duplicate
+									</button>
+								</form>
+							</DropdownMenu.Item>
+							<DropdownMenu.Item>
+								<form method="POST" action="?/toggleStatus" class="w-full">
+									<input type="hidden" name="id" value={quiz.id} />
+									<input
+										type="hidden"
+										name="status"
+										value={quiz.status === 'draft' ? 'active' : 'draft'}
+									/>
+									<button type="submit" class="flex items-center w-full">
+										{#if quiz.status === 'draft'}
+											<Download class="size-4 mr-2" />
+											Activate
+										{:else}
+											<Download class="size-4 mr-2" />
+											Deactivate
+										{/if}
+									</button>
+								</form>
+							</DropdownMenu.Item>
+							<DropdownMenu.Separator />
+							<DropdownMenu.Item
+								variant="destructive"
+								onSelect={() => handleDeleteClick(quiz)}
+							>
+								<Trash2 class="size-4 mr-2" />
+								Delete
+							</DropdownMenu.Item>
+						</DropdownMenu.Content>
+					</DropdownMenu.DropdownMenu>
+				</div>
+			{/if}
+		{/snippet}
+	</DataTable>
+{/if}
+
+<!-- Delete Confirmation Dialog -->
+<AlertDialog.Root bind:open={deleteDialogOpen}>
+	<AlertDialog.Content>
+		<AlertDialog.Header>
+			<AlertDialog.Title>Delete Quiz</AlertDialog.Title>
+			<AlertDialog.Description>
+				Are you sure you want to delete "{quizToDelete?.title}"? This action cannot be undone.
+				All questions and attempts for this quiz will be permanently deleted.
+			</AlertDialog.Description>
+		</AlertDialog.Header>
+		<AlertDialog.Footer>
+			<AlertDialog.Cancel onclick={() => (quizToDelete = null)}>Cancel</AlertDialog.Cancel>
+			<AlertDialog.Action>
+				<form method="POST" action="?/delete" use:enhance>
+					<input type="hidden" name="id" value={quizToDelete?.id} />
+					<button type="submit" class="w-full">Delete</button>
+				</form>
+			</AlertDialog.Action>
+		</AlertDialog.Footer>
+	</AlertDialog.Content>
+</AlertDialog.Root>

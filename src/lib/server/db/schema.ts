@@ -61,6 +61,7 @@ export const question = sqliteTable('question', {
 	options: text('options', { mode: 'json' }),
 	correctAnswer: text('correct_answer', { mode: 'json' }).notNull(),
 	explanation: text('explanation'),
+	codeSnippet: text('code_snippet'),
 	orderIndex: integer('order_index').notNull()
 });
 

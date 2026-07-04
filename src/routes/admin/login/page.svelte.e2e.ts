@@ -4,7 +4,7 @@ test.describe('Admin Login Flow', () => {
 	test('should redirect to login when accessing protected route without session', async ({ page }) => {
 		await page.goto('/admin');
 		await expect(page).toHaveURL('/admin/login');
-		await expect(page.locator('h2')).toContainText('Admin Login');
+		await expect(page.locator('text=Admin Login')).toBeVisible();
 	});
 
 	test('should show error with invalid credentials', async ({ page }) => {
@@ -12,7 +12,8 @@ test.describe('Admin Login Flow', () => {
 
 		await page.fill('input[name="username"]', 'admin');
 		await page.fill('input[name="password"]', 'wrongpassword');
-		await page.click('button[type="submit"]');
+		await page.locator('form').evaluate((form) => form.submit());
+		await page.waitForLoadState('networkidle');
 
 		await expect(page.locator('text=Invalid credentials')).toBeVisible();
 	});
@@ -24,11 +25,12 @@ test.describe('Admin Login Flow', () => {
 
 		await page.fill('input[name="username"]', 'admin');
 		await page.fill('input[name="password"]', 'password123');
-		await page.click('button[type="submit"]');
+		await page.locator('form').evaluate((form) => form.submit());
+		await page.waitForLoadState('networkidle');
 
 		await expect(page).toHaveURL('/admin');
-		await expect(page.locator('h1')).toContainText('Admin Dashboard');
-		await expect(page.locator('text=Logged in as: admin')).toBeVisible();
+		await expect(page.locator('h1')).toContainText('Dashboard');
+		await expect(page.locator('a[href="/admin/logout"]')).toBeVisible();
 	});
 
 	test('should logout successfully and redirect to login', async ({ page }) => {
@@ -36,15 +38,17 @@ test.describe('Admin Login Flow', () => {
 		await page.goto('/admin/login');
 		await page.fill('input[name="username"]', 'admin');
 		await page.fill('input[name="password"]', 'password123');
-		await page.click('button[type="submit"]');
-
-		await expect(page).toHaveURL('/admin');
+		await page.locator('form').evaluate((form) => form.submit());
+		await page.waitForURL('/admin');
+		await page.waitForLoadState('networkidle');
 
 		// Then logout
-		await page.click('button[type="submit"]');
+		await page.click('a[href="/admin/logout"]');
+		await page.waitForURL('/admin/login');
+		await page.waitForLoadState('networkidle');
 
 		await expect(page).toHaveURL('/admin/login');
-		await expect(page.locator('h2')).toContainText('Admin Login');
+		await expect(page.locator('text=Admin Login')).toBeVisible();
 	});
 
 	test('should require both username and password', async ({ page }) => {
