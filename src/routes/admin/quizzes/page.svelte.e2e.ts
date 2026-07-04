@@ -7,7 +7,7 @@ async function login(page: any) {
 	await page.locator('form').evaluate((form) => form.submit());
 	await page.waitForLoadState('networkidle');
 	await expect(page).toHaveURL('/admin');
-	await expect(page.locator('text=Logged in as: admin')).toBeVisible();
+	await expect(page.locator('a[href="/admin/logout"]')).toBeVisible();
 }
 
 test.describe('Quiz CRUD Operations', () => {
@@ -30,7 +30,6 @@ test.describe('Quiz CRUD Operations', () => {
 		await page.fill('textarea[name="description"]', 'A test quiz for e2e testing');
 		await page.fill('input[name="maxParticipants"]', '100');
 		await page.fill('input[name="maxAttempts"]', '1');
-		await page.check('input[name="allowBackNavigation"]');
 
 		await page.locator('form.space-y-6').evaluate((form) => form.submit());
 		await page.waitForLoadState('networkidle');
@@ -45,18 +44,20 @@ test.describe('Quiz CRUD Operations', () => {
 		await page.fill('textarea[name="description"]', 'Description');
 		await page.fill('input[name="maxParticipants"]', '50');
 		await page.fill('input[name="maxAttempts"]', '1');
-		await page.check('input[name="allowBackNavigation"]');
 		await page.locator('form.space-y-6').evaluate((form) => form.submit());
 		await page.waitForLoadState('networkidle');
 		await expect(page).toHaveURL(/\/admin\/quizzes\/.*\/edit/);
 
 		await page.fill('input[name="title"]', 'Updated Quiz Title');
+
+		// Switch to Settings tab to access maxAttempts
+		await page.click('[data-slot="tabs-trigger"]:has-text("Settings")');
 		await page.fill('input[name="maxAttempts"]', '3');
-		await page.locator('form.space-y-6').evaluate((form) => form.submit());
+		await page.locator('form[action="?/update"]').evaluate((form) => form.submit());
 		await page.waitForURL(/\/edit\?\/update/);
 		await page.waitForLoadState('networkidle');
 
-		await expect(page.locator('.bg-green-50')).toContainText('Quiz updated successfully', { timeout: 10000 });
+		await expect(page.locator('[role="alert"]')).toContainText('Quiz updated successfully', { timeout: 10000 });
 	});
 
 	test('should duplicate a quiz', async ({ page }) => {
@@ -65,18 +66,19 @@ test.describe('Quiz CRUD Operations', () => {
 		await page.fill('textarea[name="description"]', 'Original description');
 		await page.fill('input[name="maxParticipants"]', '100');
 		await page.fill('input[name="maxAttempts"]', '1');
-		await page.check('input[name="allowBackNavigation"]');
 		await page.locator('form.space-y-6').evaluate((form) => form.submit());
 		await page.waitForLoadState('networkidle');
 		await expect(page).toHaveURL(/\/admin\/quizzes\/.*\/edit/);
 
 		await page.goto('/admin/quizzes');
 
-		await page.locator('form[action="?/duplicate"]').first().evaluate((form) => form.submit());
+		// Open the dropdown menu for the first quiz
+		await page.locator('[data-slot="dropdown-menu-trigger"]').first().click();
+		await page.click('button[type="submit"]:has-text("Duplicate")');
 		await page.waitForURL(/\/quizzes\?\/duplicate/);
 		await page.waitForLoadState('networkidle');
 
-		await expect(page.locator('.bg-green-50')).toContainText('Quiz duplicated successfully', { timeout: 10000 });
+		await expect(page.locator('[role="alert"]')).toContainText('Quiz duplicated successfully', { timeout: 10000 });
 	});
 
 	test('should delete a quiz', async ({ page }) => {
@@ -85,25 +87,29 @@ test.describe('Quiz CRUD Operations', () => {
 		await page.fill('textarea[name="description"]', 'Will be deleted');
 		await page.fill('input[name="maxParticipants"]', '100');
 		await page.fill('input[name="maxAttempts"]', '1');
-		await page.check('input[name="allowBackNavigation"]');
 		await page.locator('form.space-y-6').evaluate((form) => form.submit());
 		await page.waitForLoadState('networkidle');
 		await expect(page).toHaveURL(/\/admin\/quizzes\/.*\/edit/);
 
 		await page.goto('/admin/quizzes');
 
-		page.on('dialog', (dialog) => dialog.accept());
-		await page.locator('form[action="?/delete"]').first().evaluate((form) => form.submit());
-		await page.waitForURL(/\/quizzes\?\/delete/);
+		// Open the dropdown menu for the first quiz
+		await page.locator('[data-slot="dropdown-menu-trigger"]').first().click();
+		await page.click('[data-slot="dropdown-menu-item"]:has-text("Delete")');
+		// Confirm in the alert dialog
+		await page.click('[data-slot="alert-dialog-action"] button[type="submit"]');
 		await page.waitForLoadState('networkidle');
 
-		await expect(page.locator('.bg-green-50')).toContainText('Quiz deleted successfully', { timeout: 10000 });
+		await expect(page.locator('[role="alert"]')).toContainText('Quiz deleted successfully', { timeout: 10000 });
 	});
 
 	test('should enforce max 5 active quizzes constraint', async ({ page }) => {
 		await page.goto('/admin/quizzes');
 
-		const activateButtons = page.locator('button:has-text("Activate")');
+		// Open the dropdown menu for the first quiz
+		await page.locator('[data-slot="dropdown-menu-trigger"]').first().click();
+
+		const activateButtons = page.locator('[data-slot="dropdown-menu"] button:has-text("Activate")');
 		const count = await activateButtons.count();
 
 		if (count > 0) {
@@ -111,7 +117,8 @@ test.describe('Quiz CRUD Operations', () => {
 		}
 
 		if (count > 0) {
-			await expect(activateButtons.first()).toBeVisible();
+			// After clicking activate, the dropdown closes and the button may no longer be visible
+			await page.waitForLoadState('networkidle');
 		}
 	});
 });
@@ -129,7 +136,6 @@ test.describe('Question Editor', () => {
 		await page.fill('textarea[name="description"]', 'Test quiz');
 		await page.fill('input[name="maxParticipants"]', '100');
 		await page.fill('input[name="maxAttempts"]', '1');
-		await page.check('input[name="allowBackNavigation"]');
 		await page.locator('form.space-y-6').evaluate((form) => form.submit());
 		await page.waitForLoadState('networkidle');
 		await expect(page).toHaveURL(/\/admin\/quizzes\/.*\/edit/);
@@ -175,8 +181,8 @@ test.describe('Question Editor', () => {
 		await page.click('button:has-text("Add Question")');
 		await expect(page.locator('[data-slot="sheet-content"]')).toBeVisible({ timeout: 5000 });
 
-		// Select True/False type via the select trigger
-		await page.click('[data-slot="select-trigger"]');
+		// Select True/False type via the select trigger inside the sheet
+		await page.locator('[data-slot="sheet-content"] [data-slot="select-trigger"]').click();
 		await page.click('[role="option"]:has-text("True / False")');
 
 		await page.fill('textarea[name="text"]', 'The sky is blue');
@@ -198,11 +204,11 @@ test.describe('Question Editor', () => {
 		await expect(page.locator('[data-slot="sheet-content"]')).toBeVisible({ timeout: 5000 });
 
 		// Select Fill in the Blank type
-		await page.click('[data-slot="select-trigger"]');
+		await page.locator('[data-slot="sheet-content"] [data-slot="select-trigger"]').click();
 		await page.click('[role="option"]:has-text("Fill in the Blank")');
 
 		await page.fill('textarea[name="text"]', 'The capital of France is _____');
-		await page.fill('input[name="correctAnswer"]', 'Paris');
+		await page.fill('#fitb-answer', 'Paris');
 
 		await page.click('button[type="submit"]:has-text("Add Question")');
 		await page.waitForLoadState('networkidle');

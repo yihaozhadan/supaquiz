@@ -11,6 +11,7 @@
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import PageHeader from '$lib/components/admin/PageHeader.svelte';
 	import EmptyState from '$lib/components/admin/EmptyState.svelte';
+	import { toasts } from '$lib/components/admin/toast';
 	import {
 		LayoutGrid,
 		List,
@@ -25,6 +26,11 @@
 	} from 'lucide-svelte';
 
 	let { data, form } = $props();
+
+	$effect(() => {
+		if (form?.error) toasts.error(form.error);
+		if (form?.success) toasts.success(String(form.success));
+	});
 
 	type FileKind = 'image' | 'audio' | 'video' | 'other';
 
@@ -136,18 +142,6 @@
 		</div>
 	</div>
 </PageHeader>
-
-{#if form?.error}
-	<div class="mb-4 bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded">
-		{form.error}
-	</div>
-{/if}
-
-{#if form?.success}
-	<div class="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
-		{form.success}
-	</div>
-{/if}
 
 <!-- Toolbar: filters + view toggle (6.7.1, 6.7.4) -->
 <div class="flex flex-wrap items-center gap-3 mb-6">

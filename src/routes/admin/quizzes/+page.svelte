@@ -10,6 +10,7 @@
 	import * as Select from '$lib/components/ui/select';
 	import PageHeader from '$lib/components/admin/PageHeader.svelte';
 	import EmptyState from '$lib/components/admin/EmptyState.svelte';
+	import { toasts } from '$lib/components/admin/toast';
 	import {
 		MoreHorizontal,
 		Pencil,
@@ -22,6 +23,11 @@
 	} from 'lucide-svelte';
 
 	let { data, form } = $props();
+
+	$effect(() => {
+		if (form?.error) toasts.error(form.error);
+		if (form?.success) toasts.success(String(form.success));
+	});
 
 	let searchQuery = $state('');
 	let statusFilter = $state('all');
@@ -85,18 +91,6 @@
 		New Quiz
 	</Button>
 </PageHeader>
-
-{#if form?.error}
-	<div class="mb-4 bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded">
-		{form.error}
-	</div>
-{/if}
-
-{#if form?.success}
-	<div class="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
-		{form.success}
-	</div>
-{/if}
 
 <!-- Toolbar -->
 <div class="flex items-center gap-4 mb-6">

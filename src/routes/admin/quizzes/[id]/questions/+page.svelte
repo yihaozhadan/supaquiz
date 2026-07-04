@@ -1,7 +1,13 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { toasts } from '$lib/components/admin/toast';
 
 	let { data, form } = $props();
+
+	$effect(() => {
+		if (form?.error) toasts.error(form.error);
+		if (form?.success) toasts.success('Question saved');
+	});
 
 	const quiz = data.quiz;
 	let questionType = $state('mcq_single');
@@ -32,22 +38,6 @@
 </div>
 
 <h1 class="text-2xl font-bold text-foreground mb-6">Add Question to: {quiz.title}</h1>
-
-{#if form?.errors}
-	<div class="mb-4 bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded">
-		{#each Object.entries(form.errors as Record<string, string[]>) as [field, errors]}
-			{#each errors as error}
-				<div>{field}: {error}</div>
-			{/each}
-		{/each}
-	</div>
-{/if}
-
-{#if form?.success}
-	<div class="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
-		{form.message}
-	</div>
-{/if}
 
 <form method="POST" action="?/create" class="space-y-6">
 	<input type="hidden" name="quizId" value={quiz.id} />

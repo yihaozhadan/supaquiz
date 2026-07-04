@@ -15,6 +15,7 @@
 	import PageHeader from '$lib/components/admin/PageHeader.svelte';
 	import EmptyState from '$lib/components/admin/EmptyState.svelte';
 	import QuestionEditorSheet from '$lib/components/admin/QuestionEditorSheet.svelte';
+	import { toasts } from '$lib/components/admin/toast';
 	import {
 		ArrowLeft, Plus, Trash2, ChevronUp, ChevronDown,
 		Save, X, Rocket, AlertTriangle, ListChecks, Settings,
@@ -22,6 +23,11 @@
 	} from 'lucide-svelte';
 
 	let { data, form } = $props();
+
+	$effect(() => {
+		if (form?.error) toasts.error(form.error);
+		if (form?.success) toasts.success(form?.message ?? 'Saved successfully');
+	});
 
 	const quiz = $derived(data.quiz);
 
@@ -173,18 +179,6 @@
 		Back
 	</Button>
 </PageHeader>
-
-{#if form?.error}
-	<div class="mb-4 bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg text-sm">
-		{form.error}
-	</div>
-{/if}
-
-{#if form?.success}
-	<div class="mb-4 bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-lg text-sm">
-		{form.message}
-	</div>
-{/if}
 
 {#if hasUnsavedChanges}
 	<div class="mb-4 flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-700 px-4 py-2.5 rounded-lg text-sm">

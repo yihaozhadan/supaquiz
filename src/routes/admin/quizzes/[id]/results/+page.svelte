@@ -11,6 +11,7 @@
 	import PageHeader from '$lib/components/admin/PageHeader.svelte';
 	import EmptyState from '$lib/components/admin/EmptyState.svelte';
 	import AttemptDetailSheet from '$lib/components/admin/AttemptDetailSheet.svelte';
+	import { toasts } from '$lib/components/admin/toast';
 	import {
 		ArrowLeft,
 		Search,
@@ -27,6 +28,11 @@
 	import { attemptsToCsv, attemptsToJson } from '$lib/results-format';
 
 	let { data, form } = $props();
+
+	$effect(() => {
+		if (form?.error) toasts.error(form.error);
+		if (form?.success) toasts.success(String(form.success));
+	});
 
 	type QuestionType = 'mcq_single' | 'mcq_multi' | 'true_false' | 'fitb';
 
@@ -210,18 +216,6 @@
 		Back to Quiz
 	</Button>
 </PageHeader>
-
-{#if form?.error}
-	<div class="mb-4 bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded">
-		{form.error}
-	</div>
-{/if}
-
-{#if form?.success}
-	<div class="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
-		{form.success}
-	</div>
-{/if}
 
 <!-- Metrics bar (6.6.3) -->
 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">

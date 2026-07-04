@@ -82,10 +82,14 @@
 		pageSize = Number(target.value);
 		currentPage = 1;
 	}
+
+	let displayColumns = $derived(columns.filter((c) => c.id !== 'actions' && c.id !== 'select'));
+	let actionsColumn = $derived(columns.find((c) => c.id === 'actions'));
 </script>
 
 <div class="space-y-4">
-	<div class="rounded-lg border border-border overflow-hidden">
+	<!-- Desktop: table view -->
+	<div class="hidden sm:block rounded-lg border border-border overflow-hidden">
 		<table class="min-w-full divide-y divide-border">
 			<thead class="bg-muted">
 				<tr>
@@ -99,6 +103,9 @@
 							onclick={column.sortable ? () => toggleSort(column.id) : undefined}
 							role={column.sortable ? 'button' : undefined}
 							tabindex={column.sortable ? 0 : undefined}
+							aria-sort={sortColumn === column.id
+								? (sortDirection === 'asc' ? 'ascending' : 'descending')
+								: undefined}
 							onkeydown={column.sortable
 								? (e) => {
 										if (e.key === 'Enter' || e.key === ' ') {
@@ -139,14 +146,41 @@
 		</table>
 	</div>
 
+	<!-- Mobile: card list view -->
+	<div class="sm:hidden space-y-3">
+		{#each paginatedData as row, i (i)}
+			<div class="rounded-lg border border-border bg-card p-4 space-y-2">
+				{#each displayColumns as column}
+					<div class="flex items-start justify-between gap-2">
+						<span class="text-xs font-medium text-muted-foreground shrink-0">{column.header}</span>
+						<span class="text-sm text-foreground text-right min-w-0 flex-1">
+							{@render cell({ row, column })}
+						</span>
+					</div>
+				{/each}
+				{#if actionsColumn}
+					<div class="flex justify-end pt-2 border-t border-border">
+						{@render cell({ row, column: actionsColumn })}
+					</div>
+				{/if}
+			</div>
+		{/each}
+		{#if paginatedData.length === 0}
+			<div class="py-8 text-center text-muted-foreground">
+				No data available.
+			</div>
+		{/if}
+	</div>
+
 	<!-- Pagination -->
-	<div class="flex items-center justify-between">
+	<div class="flex flex-col sm:flex-row items-center gap-3 sm:gap-0 sm:justify-between">
 		<div class="flex items-center gap-2 text-sm text-muted-foreground">
 			<span>Show</span>
 			<select
-				class="h-8 rounded-md border border-border bg-background px-2 text-sm"
+				class="h-8 rounded-md border border-border bg-background px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 				value={pageSize}
 				onchange={handlePageSizeChange}
+				aria-label="Entries per page"
 			>
 				{#each pageSizeOptions as size}
 					<option value={size}>{size}</option>
@@ -161,6 +195,7 @@
 				size="icon-sm"
 				onclick={() => goToPage(currentPage - 1)}
 				disabled={currentPage === 1}
+				aria-label="Previous page"
 			>
 				<ChevronLeft class="size-4" />
 			</Button>
@@ -170,11 +205,13 @@
 						variant={page === currentPage ? 'default' : 'outline'}
 						size="icon-sm"
 						onclick={() => goToPage(page)}
+						aria-label="Page {page}"
+						aria-current={page === currentPage ? 'page' : undefined}
 					>
 						{page}
 					</Button>
 				{:else if page === currentPage - 2 || page === currentPage + 2}
-					<span class="px-1 text-muted-foreground">...</span>
+					<span class="px-1 text-muted-foreground" aria-hidden="true">...</span>
 				{/if}
 			{/each}
 			<Button
@@ -182,6 +219,7 @@
 				size="icon-sm"
 				onclick={() => goToPage(currentPage + 1)}
 				disabled={currentPage === totalPages}
+				aria-label="Next page"
 			>
 				<ChevronRight class="size-4" />
 			</Button>

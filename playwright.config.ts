@@ -4,6 +4,8 @@ export default defineConfig({
 	webServer: {
 		command: 'npm run build && ./scripts/preview-e2e.sh',
 		port: 4173,
+		timeout: 180_000,
+		reuseExistingServer: !process.env.CI,
 		env: {
 			DATABASE_URL: './data/supaquiz-test.db',
 			ADMIN_USER: 'admin',

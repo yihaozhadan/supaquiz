@@ -1,9 +1,11 @@
 <script lang="ts">
-	import { ListChecks, Zap, FileCheck, Users, ArrowRight } from 'lucide-svelte';
+	import { ListChecks, Zap, FileCheck, Users, ArrowRight, Activity } from 'lucide-svelte';
 	import { Card, CardHeader, CardTitle, CardContent } from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Separator } from '$lib/components/ui/separator';
+	import PageHeader from '$lib/components/admin/PageHeader.svelte';
+	import EmptyState from '$lib/components/admin/EmptyState.svelte';
 
 	let { data } = $props();
 
@@ -58,6 +60,8 @@
 </script>
 
 <div class="space-y-6">
+	<PageHeader title="Dashboard" description="Overview of your quiz platform activity" />
+
 	<!-- Stats Cards Row (6.2.1) -->
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 		{#each stats as stat}
@@ -95,9 +99,11 @@
 				</CardHeader>
 				<CardContent>
 					{#if data.recentAttempts.length === 0}
-						<div class="py-8 text-center">
-							<p class="text-sm text-muted-foreground">No activity yet</p>
-						</div>
+						<EmptyState
+							icon={Activity}
+							title="No activity yet"
+							description="Participant attempts will appear here once quizzes are taken."
+						/>
 					{:else}
 						<div class="space-y-1">
 							{#each data.recentAttempts as attempt, i}
