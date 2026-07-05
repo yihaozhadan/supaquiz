@@ -398,28 +398,28 @@
 
 ### 8.3 Quiz Browse & Search Page (`/quizzes`)
 
-- [ ] **8.3.1** Create `(public)/quizzes/+page.svelte`:
+- [x] **8.3.1** Create `(public)/quizzes/+page.svelte`:
   - Full-page quiz directory with prominent search bar at top.
   - Search input with real-time debounced filtering (by title and description).
-- [ ] **8.3.2** Filter controls:
+- [x] **8.3.2** Filter controls:
   - Status filter (Active / All) — default Active.
   - Sort dropdown: Newest, Oldest, Most Popular, Alphabetical.
   - Filters collapse into drawer on mobile.
-- [ ] **8.3.3** Quiz card grid:
+- [x] **8.3.3** Quiz card grid:
   - Responsive: 1-col mobile, 2-col tablet, 3-col desktop.
   - Each card: title, description (2-line truncation), question count, time limit badge, attempt count, lock icon if password-protected, "Start Quiz" button.
   - Status indicators for scheduling (upcoming, ending soon).
-- [ ] **8.3.4** Pagination:
+- [x] **8.3.4** Pagination:
   - 12 quizzes per page.
   - Page number navigation with prev/next.
   - Results count indicator (e.g., "Showing 1–12 of 34 quizzes").
-- [ ] **8.3.5** Empty and loading states:
+- [x] **8.3.5** Empty and loading states:
   - Empty: "No quizzes found. Try adjusting your search." with illustration.
   - Loading: skeleton card grid (3x2 skeleton cards).
-- [ ] **8.3.6** Server-side data loading in `(public)/quizzes/+page.server.ts`:
+- [x] **8.3.6** Server-side data loading in `(public)/quizzes/+page.server.ts`:
   - Query public quizzes with search, filter, sort, and pagination params.
   - Return paginated results with total count.
-- [ ] **8.3.7** Breadcrumb: Home > Browse Quizzes.
+- [x] **8.3.7** Breadcrumb: Home > Browse Quizzes.
 
 ### 8.4 Documentation Page (`/docs`)
 
