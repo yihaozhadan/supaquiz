@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { beforeNavigate } from '$app/navigation';
+	import { page } from '$app/state';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Textarea } from '$lib/components/ui/textarea';
@@ -27,6 +28,17 @@
 	$effect(() => {
 		if (form?.error) toasts.error(form.error);
 		if (form?.success) toasts.success(form?.message ?? 'Saved successfully');
+	});
+
+	$effect(() => {
+		if (page.url.searchParams.get('imported') === '1') {
+			const warningCount = Number(page.url.searchParams.get('warnings') || 0);
+			toasts.success(
+				warningCount > 0
+					? `Quiz imported with ${warningCount} warning(s) — some media files were missing`
+					: 'Quiz imported successfully'
+			);
+		}
 	});
 
 	const quiz = $derived(data.quiz);

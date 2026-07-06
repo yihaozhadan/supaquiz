@@ -1,4 +1,4 @@
-import { mkdir, writeFile, unlink, rmdir } from 'fs/promises';
+import { mkdir, writeFile, unlink, rmdir, readFile } from 'fs/promises';
 import { join, dirname, sep } from 'path';
 import { env } from '$env/dynamic/private';
 
@@ -99,6 +99,36 @@ export async function deleteQuestionMedia(mediaUrl: string): Promise<void> {
 		}
 		dir = dirname(dir);
 	}
+}
+
+/**
+ * Copy an existing question media file (referenced by an old quiz's mediaUrl)
+ * into the storage location for a new quiz, used during quiz import.
+ *
+ * Returns the new relative mediaUrl, or `null` if the source file could not
+ * be found (e.g. it was not included alongside an imported JSON export).
+ */
+export async function copyQuestionMedia(
+	oldMediaUrl: string,
+	newQuizId: string
+): Promise<string | null> {
+	const absoluteOld = join(DATA_DIR, oldMediaUrl);
+
+	let data: Buffer;
+	try {
+		data = await readFile(absoluteOld);
+	} catch {
+		return null;
+	}
+
+	const fileExt = oldMediaUrl.split('.').pop() || 'bin';
+	const fileName = `${crypto.randomUUID()}.${fileExt}`;
+	const quizDir = join(UPLOADS_DIR, 'quizzes', newQuizId);
+
+	await mkdir(quizDir, { recursive: true });
+	await writeFile(join(quizDir, fileName), data);
+
+	return `/uploads/quizzes/${newQuizId}/${fileName}`;
 }
 
 export function getMediaPath(mediaUrl: string): string {

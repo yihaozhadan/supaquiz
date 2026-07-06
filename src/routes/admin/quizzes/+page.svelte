@@ -19,7 +19,9 @@
 		BarChart3,
 		Download,
 		Plus,
-		Search
+		Search,
+		Upload,
+		FileJson
 	} from 'lucide-svelte';
 
 	let { data, form } = $props();
@@ -86,6 +88,10 @@
 </script>
 
 <PageHeader title="Quizzes" description="Manage your quizzes and track participant engagement">
+	<Button href="/admin/quizzes/import" variant="outline">
+		<Upload class="size-4 mr-2" />
+		Import
+	</Button>
 	<Button href="/admin/quizzes/new">
 		<Plus class="size-4 mr-2" />
 		New Quiz
@@ -185,6 +191,12 @@
 								</DropdownMenu.Item>
 							</a>
 							<DropdownMenu.Separator />
+							<a href="/admin/quizzes/{quiz.id}/export" class="contents">
+								<DropdownMenu.Item>
+									<FileJson class="size-4 mr-2" />
+									Export
+								</DropdownMenu.Item>
+							</a>
 							<DropdownMenu.Item>
 								<form method="POST" action="?/duplicate" class="w-full">
 									<input type="hidden" name="id" value={quiz.id} />

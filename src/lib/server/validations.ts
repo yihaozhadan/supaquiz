@@ -55,3 +55,32 @@ export const quizStatusToggleSchema = z.object({
 	id: z.uuid(),
 	status: z.enum(['draft', 'active', 'expired'])
 });
+
+export const quizExportQuestionSchema = z.object({
+	type: z.enum(['mcq_single', 'mcq_multi', 'true_false', 'fitb']),
+	text: z.string().min(1).max(2000),
+	mediaUrl: z.string().max(500).nullable().optional(),
+	options: z.array(questionOptionSchema).nullable().optional(),
+	correctAnswer: z.union([z.string(), z.array(z.string())]),
+	explanation: z.string().max(2000).nullable().optional(),
+	codeSnippet: z.string().max(10000).nullable().optional(),
+	orderIndex: z.number().int().min(0)
+});
+
+export const quizExportSchema = z.object({
+	version: z.literal(1),
+	quiz: z.object({
+		title: z.string().min(1).max(200),
+		description: z.string().min(1).max(2000),
+		password: z.string().nullable().optional(),
+		timeLimitSeconds: z.number().int().min(0).nullable().optional(),
+		shuffleQuestions: z.boolean().default(false),
+		maxAttempts: z.number().int().min(1).default(1),
+		maxParticipants: z.number().int().min(1),
+		allowBackNavigation: z.boolean().default(true),
+		revealAnswersAfter: z.enum(['immediate', 'never']).default('immediate'),
+		intakeFormSchema: z.array(intakeFormFieldSchema).default([]),
+		isPublic: z.boolean().default(true)
+	}),
+	questions: z.array(quizExportQuestionSchema).max(50)
+});
