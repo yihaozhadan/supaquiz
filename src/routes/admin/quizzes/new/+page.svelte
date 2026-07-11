@@ -16,6 +16,7 @@
 	let isSubmitting = $state(false);
 	let shuffleQuestions = $state(false);
 	let allowBackNavigation = $state(true);
+	let questionDisplayMode = $state('one_at_a_time');
 	let revealAnswersAfter = $state('immediate');
 
 	$effect(() => {
@@ -40,6 +41,7 @@
 	<input type="hidden" name="shuffleQuestions" value={shuffleQuestions ? 'on' : ''} />
 	<input type="hidden" name="allowBackNavigation" value={allowBackNavigation ? 'on' : ''} />
 	<input type="hidden" name="revealAnswersAfter" value={revealAnswersAfter} />
+	<input type="hidden" name="questionDisplayMode" value={questionDisplayMode} />
 
 	<Card>
 		<CardHeader>
@@ -90,6 +92,18 @@
 						<Select.Content>
 							<Select.Item value="immediate">Immediate</Select.Item>
 							<Select.Item value="never">Never</Select.Item>
+						</Select.Content>
+					</Select.Root>
+				</div>
+				<div class="space-y-2">
+					<Label for="questionDisplayMode">Question Display</Label>
+					<Select.Root type="single" bind:value={questionDisplayMode}>
+						<Select.Trigger id="questionDisplayMode" class="w-full">
+							{questionDisplayMode === 'all_on_one_page' ? 'All on one page' : 'One at a time'}
+						</Select.Trigger>
+						<Select.Content>
+							<Select.Item value="one_at_a_time">One at a time</Select.Item>
+							<Select.Item value="all_on_one_page">All on one page</Select.Item>
 						</Select.Content>
 					</Select.Root>
 				</div>

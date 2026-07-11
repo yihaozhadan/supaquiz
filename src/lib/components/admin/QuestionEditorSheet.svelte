@@ -118,16 +118,28 @@
 				}
 
 				if (question.type === 'mcq_single' || question.type === 'mcq_multi') {
-					options = question.options?.length
+					const baseOptions = question.options?.length
 						? question.options.map((o) => ({ ...o }))
 						: [
 							{ id: crypto.randomUUID(), text: '', isCorrect: false },
 							{ id: crypto.randomUUID(), text: '', isCorrect: false }
 						];
+					const correct = question.correctAnswer;
+					const correctIds = new Set(
+						Array.isArray(correct) ? correct.map(String) : correct != null ? [String(correct)] : []
+					);
+					options = baseOptions.map((o) => ({
+						...o,
+						isCorrect:
+							correctIds.has(String(o.id)) || correctIds.has(String(o.text))
+					}));
 				} else if (question.type === 'true_false') {
-					trueFalseAnswer = (question.correctAnswer as string) === 'false' ? 'false' : 'true';
+					trueFalseAnswer =
+						question.correctAnswer != null && String(question.correctAnswer) === 'false'
+							? 'false'
+							: 'true';
 				} else if (question.type === 'fitb') {
-					fitbAnswer = (question.correctAnswer as string) || '';
+					fitbAnswer = question.correctAnswer == null ? '' : String(question.correctAnswer);
 				}
 			} else {
 				resetForm();

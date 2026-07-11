@@ -12,7 +12,7 @@ test.describe('Admin Login Flow', () => {
 
 		await page.fill('input[name="username"]', 'admin');
 		await page.fill('input[name="password"]', 'wrongpassword');
-		await page.locator('form').evaluate((form) => form.submit());
+		await page.locator('form').evaluate((form: HTMLFormElement) => form.submit());
 		await page.waitForLoadState('networkidle');
 
 		await expect(page.locator('text=Invalid credentials')).toBeVisible();
@@ -25,7 +25,7 @@ test.describe('Admin Login Flow', () => {
 
 		await page.fill('input[name="username"]', 'admin');
 		await page.fill('input[name="password"]', 'password123');
-		await page.locator('form').evaluate((form) => form.submit());
+		await page.locator('form').evaluate((form: HTMLFormElement) => form.submit());
 		await page.waitForLoadState('networkidle');
 
 		await expect(page).toHaveURL('/admin');
@@ -38,7 +38,7 @@ test.describe('Admin Login Flow', () => {
 		await page.goto('/admin/login');
 		await page.fill('input[name="username"]', 'admin');
 		await page.fill('input[name="password"]', 'password123');
-		await page.locator('form').evaluate((form) => form.submit());
+		await page.locator('form').evaluate((form: HTMLFormElement) => form.submit());
 		await page.waitForURL('/admin');
 		await page.waitForLoadState('networkidle');
 

@@ -27,6 +27,11 @@ export const quiz = sqliteTable('quiz', {
 	allowBackNavigation: integer('allow_back_navigation', { mode: 'boolean' })
 		.notNull()
 		.default(true),
+	questionDisplayMode: text('question_display_mode', {
+		enum: ['one_at_a_time', 'all_on_one_page']
+	})
+		.notNull()
+		.default('one_at_a_time'),
 	revealAnswersAfter: text('reveal_answers_after', {
 		enum: ['immediate', 'never']
 	})
@@ -73,6 +78,7 @@ export const attempt = sqliteTable('attempt', {
 	quizId: text('quiz_id')
 		.notNull()
 		.references(() => quiz.id, { onDelete: 'cascade' }),
+	participantKey: text('participant_key').notNull(),
 	intakeFormData: text('intake_form_data', { mode: 'json' }).notNull(),
 	answers: text('answers', { mode: 'json' }).notNull(),
 	score: integer('score').notNull(),

@@ -51,6 +51,7 @@
 	let maxParticipants = $state(quiz.maxParticipants?.toString() || '');
 	let shuffleQuestions = $state(quiz.shuffleQuestions);
 	let allowBackNavigation = $state(quiz.allowBackNavigation);
+	let questionDisplayMode = $state(quiz.questionDisplayMode);
 	let revealAnswersAfter = $state(quiz.revealAnswersAfter);
 	let activateAt = $state(
 		quiz.activateAt ? new Date(quiz.activateAt).toISOString().slice(0, 16) : ''
@@ -105,9 +106,7 @@
 					isCorrect: o.isCorrect
 				}))
 				: [],
-			correctAnswer: q.correctAnswer
-				? (typeof q.correctAnswer === 'string' ? JSON.parse(q.correctAnswer) : q.correctAnswer)
-				: undefined,
+			correctAnswer: q.correctAnswer,
 			orderIndex: q.orderIndex
 		};
 		questionSheetOpen = true;
@@ -248,7 +247,7 @@
 
 					<div class="space-y-2">
 						<label for="description" class="text-sm font-medium text-foreground">Description</label>
-						<Textarea name="description" id="description" rows="3" bind:value={description} required oninput={markChanged} />
+						<Textarea name="description" id="description" rows={3} bind:value={description} required oninput={markChanged} />
 					</div>
 
 					<div class="space-y-2">
@@ -488,6 +487,19 @@
 								</Select.Content>
 							</Select.Root>
 							<input type="hidden" name="revealAnswersAfter" value={revealAnswersAfter} />
+						</div>
+						<div class="space-y-2">
+							<label for="questionDisplayMode" class="text-sm font-medium text-foreground">Question Display</label>
+							<Select.Root type="single" bind:value={questionDisplayMode}>
+								<Select.Trigger class="w-full">
+									{questionDisplayMode === 'all_on_one_page' ? 'All on one page' : 'One at a time'}
+								</Select.Trigger>
+								<Select.Content>
+									<Select.Item value="one_at_a_time">One at a time</Select.Item>
+									<Select.Item value="all_on_one_page">All on one page</Select.Item>
+								</Select.Content>
+							</Select.Root>
+							<input type="hidden" name="questionDisplayMode" value={questionDisplayMode} />
 						</div>
 					</div>
 

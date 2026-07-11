@@ -15,6 +15,7 @@ export const quizCreateSchema = z.object({
 	maxAttempts: z.number().int().min(1).default(1),
 	maxParticipants: z.number().int().min(1),
 	allowBackNavigation: z.boolean().default(true),
+	questionDisplayMode: z.enum(['one_at_a_time', 'all_on_one_page']).default('one_at_a_time'),
 	revealAnswersAfter: z.enum(['immediate', 'never']).default('immediate'),
 	intakeFormSchema: z.array(intakeFormFieldSchema).default([]),
 	status: z.enum(['draft', 'active', 'expired']).default('draft'),
@@ -78,6 +79,7 @@ export const quizExportSchema = z.object({
 		maxAttempts: z.number().int().min(1).default(1),
 		maxParticipants: z.number().int().min(1),
 		allowBackNavigation: z.boolean().default(true),
+		questionDisplayMode: z.enum(['one_at_a_time', 'all_on_one_page']).default('one_at_a_time'),
 		revealAnswersAfter: z.enum(['immediate', 'never']).default('immediate'),
 		intakeFormSchema: z.array(intakeFormFieldSchema).default([]),
 		isPublic: z.boolean().default(true)

@@ -8,7 +8,7 @@ export async function load() {
 export const actions = {
 	default: async ({ request }) => {
 		const result = await createQuiz(await request.formData());
-		if (result.success) {
+		if (result.success && result.quiz) {
 			redirect(302, `/admin/quizzes/${result.quiz.id}/edit`);
 		}
 		return result;

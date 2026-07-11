@@ -15,6 +15,7 @@ export interface QuizExportData {
 		maxAttempts: number;
 		maxParticipants: number;
 		allowBackNavigation: boolean;
+		questionDisplayMode: 'one_at_a_time' | 'all_on_one_page';
 		revealAnswersAfter: 'immediate' | 'never';
 		intakeFormSchema: unknown;
 		isPublic: boolean;
@@ -52,6 +53,7 @@ export async function exportQuiz(id: string): Promise<QuizExportData | null> {
 			maxAttempts: quizData.maxAttempts,
 			maxParticipants: quizData.maxParticipants,
 			allowBackNavigation: quizData.allowBackNavigation,
+			questionDisplayMode: quizData.questionDisplayMode,
 			revealAnswersAfter: quizData.revealAnswersAfter,
 			intakeFormSchema: quizData.intakeFormSchema,
 			isPublic: quizData.isPublic
@@ -96,7 +98,6 @@ export async function importQuiz(jsonText: string) {
 		.insert(quiz)
 		.values({
 			...quizFields,
-			intakeFormSchema: JSON.stringify(quizFields.intakeFormSchema),
 			status: 'draft'
 		})
 		.returning();
@@ -118,8 +119,8 @@ export async function importQuiz(jsonText: string) {
 				type: q.type,
 				text: q.text,
 				mediaUrl,
-				options: q.options ? JSON.stringify(q.options) : null,
-				correctAnswer: JSON.stringify(q.correctAnswer),
+				options: q.options ?? null,
+				correctAnswer: q.correctAnswer,
 				explanation: q.explanation ?? null,
 				codeSnippet: q.codeSnippet ?? null,
 				orderIndex: q.orderIndex
