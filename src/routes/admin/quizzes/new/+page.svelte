@@ -16,6 +16,7 @@
 	let isSubmitting = $state(false);
 	let shuffleQuestions = $state(false);
 	let allowBackNavigation = $state(true);
+	let isVisibleAfterExpiry = $state(true);
 	let questionDisplayMode = $state('one_at_a_time');
 	let revealAnswersAfter = $state('immediate');
 
@@ -40,6 +41,7 @@
 	}}>
 	<input type="hidden" name="shuffleQuestions" value={shuffleQuestions ? 'on' : ''} />
 	<input type="hidden" name="allowBackNavigation" value={allowBackNavigation ? 'on' : ''} />
+	<input type="hidden" name="isVisibleAfterExpiry" value={isVisibleAfterExpiry ? 'on' : ''} />
 	<input type="hidden" name="revealAnswersAfter" value={revealAnswersAfter} />
 	<input type="hidden" name="questionDisplayMode" value={questionDisplayMode} />
 
@@ -123,6 +125,13 @@
 						<p class="text-xs text-muted-foreground">Let participants go back to previous questions</p>
 					</div>
 					<Switch id="allowBackNavigation" bind:checked={allowBackNavigation} disabled={isSubmitting} />
+				</div>
+				<div class="flex items-center justify-between">
+					<div>
+						<Label for="isVisibleAfterExpiry">Visible After Expiry</Label>
+						<p class="text-xs text-muted-foreground">Allow public browsing of questions and answers after the quiz expires</p>
+					</div>
+					<Switch id="isVisibleAfterExpiry" bind:checked={isVisibleAfterExpiry} disabled={isSubmitting} />
 				</div>
 			</div>
 		</CardContent>

@@ -19,6 +19,8 @@ export const quizCreateSchema = z.object({
 	revealAnswersAfter: z.enum(['immediate', 'never']).default('immediate'),
 	intakeFormSchema: z.array(intakeFormFieldSchema).default([]),
 	status: z.enum(['draft', 'active', 'expired']).default('draft'),
+	isPublic: z.boolean().default(true),
+	isVisibleAfterExpiry: z.boolean().default(true),
 	activateAt: z.coerce.date().optional(),
 	expireAt: z.coerce.date().optional()
 });
@@ -82,7 +84,8 @@ export const quizExportSchema = z.object({
 		questionDisplayMode: z.enum(['one_at_a_time', 'all_on_one_page']).default('one_at_a_time'),
 		revealAnswersAfter: z.enum(['immediate', 'never']).default('immediate'),
 		intakeFormSchema: z.array(intakeFormFieldSchema).default([]),
-		isPublic: z.boolean().default(true)
+		isPublic: z.boolean().default(true),
+		isVisibleAfterExpiry: z.boolean().default(true)
 	}),
 	questions: z.array(quizExportQuestionSchema).max(50)
 });

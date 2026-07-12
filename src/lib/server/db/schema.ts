@@ -19,9 +19,7 @@ export const quiz = sqliteTable('quiz', {
 	description: text('description').notNull(),
 	password: text('password'),
 	timeLimitSeconds: integer('time_limit_seconds'),
-	shuffleQuestions: integer('shuffle_questions', { mode: 'boolean' })
-		.notNull()
-		.default(false),
+	shuffleQuestions: integer('shuffle_questions', { mode: 'boolean' }).notNull().default(false),
 	maxAttempts: integer('max_attempts').notNull().default(1),
 	maxParticipants: integer('max_participants').notNull(),
 	allowBackNavigation: integer('allow_back_navigation', { mode: 'boolean' })
@@ -42,6 +40,9 @@ export const quiz = sqliteTable('quiz', {
 		.notNull()
 		.default('draft'),
 	isPublic: integer('is_public', { mode: 'boolean' }).notNull().default(true),
+	isVisibleAfterExpiry: integer('is_visible_after_expiry', { mode: 'boolean' })
+		.notNull()
+		.default(true),
 	activateAt: integer('activate_at', { mode: 'timestamp' }),
 	expireAt: integer('expire_at', { mode: 'timestamp' }),
 	createdAt: integer('created_at', { mode: 'timestamp' })

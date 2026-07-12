@@ -1,7 +1,7 @@
 import { and, count, countDistinct, eq } from 'drizzle-orm';
 import { db } from './db';
 import { attempt, question, quiz } from './db/schema';
-import { normalizeCorrectAnswer, normalizeQuestion, normalizeOptions } from './quiz-actions';
+import { normalizeCorrectAnswer, normalizeQuestion } from './quiz-actions';
 import { gradeQuiz, type GradableQuestion } from './grading';
 
 export interface IntakeFormField {
@@ -39,16 +39,19 @@ export async function checkQuizAvailability(quizData: {
 	expireAt: Date | null;
 	maxParticipants: number;
 }): Promise<QuizAvailability> {
-	if (quizData.status !== 'active') {
-		return { available: false, reason: 'inactive' };
-	}
-
 	const now = Date.now();
-	if (quizData.activateAt && quizData.activateAt.getTime() > now) {
-		return { available: false, reason: 'not_started' };
+
+	if (quizData.status === 'expired') {
+		return { available: false, reason: 'expired' };
 	}
 	if (quizData.expireAt && quizData.expireAt.getTime() < now) {
 		return { available: false, reason: 'expired' };
+	}
+	if (quizData.status !== 'active') {
+		return { available: false, reason: 'inactive' };
+	}
+	if (quizData.activateAt && quizData.activateAt.getTime() > now) {
+		return { available: false, reason: 'not_started' };
 	}
 
 	const attemptCount = await db

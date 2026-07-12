@@ -19,6 +19,7 @@ export interface QuizExportData {
 		revealAnswersAfter: 'immediate' | 'never';
 		intakeFormSchema: unknown;
 		isPublic: boolean;
+		isVisibleAfterExpiry: boolean;
 	};
 	questions: Array<{
 		type: string;
@@ -56,7 +57,8 @@ export async function exportQuiz(id: string): Promise<QuizExportData | null> {
 			questionDisplayMode: quizData.questionDisplayMode,
 			revealAnswersAfter: quizData.revealAnswersAfter,
 			intakeFormSchema: quizData.intakeFormSchema,
-			isPublic: quizData.isPublic
+			isPublic: quizData.isPublic,
+			isVisibleAfterExpiry: quizData.isVisibleAfterExpiry
 		},
 		questions: quizData.questions.map((q) => ({
 			type: q.type,

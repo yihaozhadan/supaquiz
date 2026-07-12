@@ -51,6 +51,7 @@
 	let maxParticipants = $state(quiz.maxParticipants?.toString() || '');
 	let shuffleQuestions = $state(quiz.shuffleQuestions);
 	let allowBackNavigation = $state(quiz.allowBackNavigation);
+	let isVisibleAfterExpiry = $state(quiz.isVisibleAfterExpiry ?? true);
 	let questionDisplayMode = $state(quiz.questionDisplayMode);
 	let revealAnswersAfter = $state(quiz.revealAnswersAfter);
 	let activateAt = $state(
@@ -214,6 +215,7 @@
 	<input type="hidden" name="intakeFormSchema" value={intakeFormJson} />
 	<input type="hidden" name="shuffleQuestions" value={shuffleQuestions ? 'on' : ''} />
 	<input type="hidden" name="allowBackNavigation" value={allowBackNavigation ? 'on' : ''} />
+	<input type="hidden" name="isVisibleAfterExpiry" value={isVisibleAfterExpiry ? 'on' : ''} />
 
 	<Tabs.Root bind:value={activeTab} class="gap-4">
 		<Tabs.List>
@@ -532,6 +534,13 @@
 								<p class="text-xs text-muted-foreground">Let participants go back to previous questions</p>
 							</div>
 							<Switch bind:checked={allowBackNavigation} onCheckedChange={markChanged} name="allowBackNavigation" />
+						</div>
+						<div class="flex items-center justify-between">
+							<div>
+								<p class="text-sm font-medium text-foreground">Visible After Expiry</p>
+								<p class="text-xs text-muted-foreground">Allow public browsing of questions and answers after the quiz expires</p>
+							</div>
+							<Switch bind:checked={isVisibleAfterExpiry} onCheckedChange={markChanged} name="isVisibleAfterExpiry" />
 						</div>
 					</div>
 				</CardContent>

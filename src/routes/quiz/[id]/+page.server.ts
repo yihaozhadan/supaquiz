@@ -9,6 +9,7 @@ import {
 	verifyQuizPassword,
 	type IntakeFormField
 } from '$lib/server/quiz-attempts';
+import { normalizeQuestion } from '$lib/server/quiz-actions';
 import {
 	createQuizSession,
 	getOrCreateParticipantId,
@@ -47,6 +48,45 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 	const passwordRequired = Boolean(quizData.password);
 	const passwordVerified = passwordRequired ? isPasswordVerified(cookies, quizData.id) : true;
 
+	const viewOnly =
+		!availability.available &&
+		availability.reason === 'expired' &&
+		quizData.isPublic &&
+		quizData.isVisibleAfterExpiry;
+
+	let questions: {
+		id: string;
+		text: string;
+		type: string;
+		options: { id: string; text: string; isCorrect: boolean }[] | null;
+		correctAnswer: string | string[];
+		explanation: string | null;
+		mediaUrl: string | null;
+		codeSnippet: string | null;
+	}[] = [];
+
+	if (viewOnly) {
+		const raw = await db.query.question.findMany({
+			where: eq(question.quizId, params.id),
+			orderBy: [question.orderIndex]
+		});
+		questions = raw.map((q) => {
+			const normalized = normalizeQuestion(q);
+			return {
+				id: normalized.id,
+				text: normalized.text,
+				type: normalized.type,
+				options: normalized.options
+					? (normalized.options as { id: string; text: string; isCorrect: boolean }[])
+					: null,
+				correctAnswer: normalized.correctAnswer as string | string[],
+				explanation: normalized.explanation,
+				mediaUrl: normalized.mediaUrl,
+				codeSnippet: normalized.codeSnippet
+			};
+		});
+	}
+
 	return {
 		quiz: {
 			id: quizData.id,
@@ -59,7 +99,9 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 		},
 		availability,
 		passwordRequired,
-		passwordVerified
+		passwordVerified,
+		viewOnly,
+		questions
 	};
 };
 
@@ -109,7 +151,9 @@ export const actions: Actions = {
 
 		const attemptsSoFar = await countAttemptsForParticipant(quizData.id, participantKey);
 		if (attemptsSoFar >= quizData.maxAttempts) {
-			return fail(400, { intakeError: 'You have reached the maximum number of attempts for this quiz' });
+			return fail(400, {
+				intakeError: 'You have reached the maximum number of attempts for this quiz'
+			});
 		}
 
 		const questions = await db.query.question.findMany({

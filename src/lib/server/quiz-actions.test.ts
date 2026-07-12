@@ -31,6 +31,7 @@ vi.mock('./db', () => ({
 describe('Quiz Constraints', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		vi.mocked(db.query.question.findMany).mockResolvedValue([]);
 	});
 
 	describe('Max 5 Active Quizzes', () => {

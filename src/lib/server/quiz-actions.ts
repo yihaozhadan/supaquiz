@@ -71,7 +71,9 @@ export function normalizeCorrectAnswer(type: string, value: unknown): string | s
  * Tolerate old data where `options` was stored as a JSON string, or where
  * options were stored as plain strings.
  */
-export function normalizeOptions(raw: unknown): { id: string; text: string; isCorrect: boolean }[] | null {
+export function normalizeOptions(
+	raw: unknown
+): { id: string; text: string; isCorrect: boolean }[] | null {
 	if (raw == null) return null;
 
 	let list = raw;
@@ -157,6 +159,12 @@ export async function createQuiz(formData: FormData) {
 		maxParticipants: Number(data.maxParticipants),
 		shuffleQuestions: data.shuffleQuestions === 'on',
 		allowBackNavigation: data.allowBackNavigation === 'on',
+		isVisibleAfterExpiry:
+			data.isVisibleAfterExpiry === 'on'
+				? true
+				: data.isVisibleAfterExpiry === undefined
+					? undefined
+					: false,
 		questionDisplayMode: data.questionDisplayMode || 'one_at_a_time',
 		intakeFormSchema: data.intakeFormSchema ? JSON.parse(data.intakeFormSchema as string) : []
 	};
@@ -186,8 +194,16 @@ export async function updateQuiz(formData: FormData) {
 		maxParticipants: data.maxParticipants ? Number(data.maxParticipants) : undefined,
 		shuffleQuestions: data.shuffleQuestions === 'on',
 		allowBackNavigation: data.allowBackNavigation === 'on',
+		isVisibleAfterExpiry:
+			data.isVisibleAfterExpiry === 'on'
+				? true
+				: data.isVisibleAfterExpiry === undefined
+					? undefined
+					: false,
 		questionDisplayMode: data.questionDisplayMode || undefined,
-		intakeFormSchema: data.intakeFormSchema ? JSON.parse(data.intakeFormSchema as string) : undefined,
+		intakeFormSchema: data.intakeFormSchema
+			? JSON.parse(data.intakeFormSchema as string)
+			: undefined,
 		activateAt: data.activateAt ? new Date(data.activateAt as string) : undefined,
 		expireAt: data.expireAt ? new Date(data.expireAt as string) : undefined
 	};
@@ -218,7 +234,7 @@ export async function deleteQuiz(id: string) {
 }
 
 export async function duplicateQuiz(id: string) {
-	const originalQuiz = await getQuizById(id) as {
+	const originalQuiz = (await getQuizById(id)) as {
 		questions: any[];
 		[key: string]: any;
 	} | null;
@@ -239,6 +255,8 @@ export async function duplicateQuiz(id: string) {
 			allowBackNavigation: originalQuiz.allowBackNavigation,
 			questionDisplayMode: originalQuiz.questionDisplayMode,
 			revealAnswersAfter: originalQuiz.revealAnswersAfter,
+			isPublic: originalQuiz.isPublic,
+			isVisibleAfterExpiry: originalQuiz.isVisibleAfterExpiry,
 			intakeFormSchema: originalQuiz.intakeFormSchema,
 			status: 'draft',
 			activateAt: originalQuiz.activateAt,

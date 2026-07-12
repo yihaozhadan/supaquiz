@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, or, sql, type SQL } from 'drizzle-orm';
 import { db } from './db';
 import { attempt, question, quiz } from './db/schema';
 
@@ -57,7 +57,13 @@ function buildSummary(row: {
  */
 export async function getPublicQuizzes(limit?: number): Promise<PublicQuizSummary[]> {
 	const quizzes = await db.query.quiz.findMany({
-		where: and(eq(quiz.status, 'active'), eq(quiz.isPublic, true)),
+		where: and(
+			eq(quiz.isPublic, true),
+			or(
+				eq(quiz.status, 'active'),
+				and(eq(quiz.status, 'expired'), eq(quiz.isVisibleAfterExpiry, true))
+			)
+		),
 		orderBy: [desc(quiz.createdAt)],
 		limit
 	});
@@ -105,16 +111,35 @@ export async function getPublicQuizzes(limit?: number): Promise<PublicQuizSummar
  */
 export async function getPublicQuizzesPaged(options: {
 	query?: string;
-	status?: 'active' | 'all';
+	status?: 'active' | 'all' | 'expired';
 	sort?: 'newest' | 'oldest' | 'most_popular' | 'alphabetical';
 	page?: number;
 	pageSize?: number;
 }): Promise<PublicQuizPage> {
-	const { query, status = 'active', sort = 'newest', page = 1, pageSize = DEFAULT_PAGE_SIZE } = options;
+	const {
+		query,
+		status = 'active',
+		sort = 'newest',
+		page = 1,
+		pageSize = DEFAULT_PAGE_SIZE
+	} = options;
 	const offset = Math.max(0, page - 1) * pageSize;
 
-	const filters = [eq(quiz.isPublic, true)];
-	if (status === 'active') filters.push(eq(quiz.status, 'active'));
+	const filters: SQL<unknown>[] = [eq(quiz.isPublic, true)];
+	if (status === 'active') {
+		filters.push(eq(quiz.status, 'active'));
+	} else if (status === 'expired') {
+		filters.push(
+			and(eq(quiz.status, 'expired'), eq(quiz.isVisibleAfterExpiry, true)) as SQL<unknown>
+		);
+	} else if (status === 'all') {
+		filters.push(
+			or(
+				eq(quiz.status, 'active'),
+				and(eq(quiz.status, 'expired'), eq(quiz.isVisibleAfterExpiry, true)) as SQL<unknown>
+			) as SQL<unknown>
+		);
+	}
 
 	if (query?.trim()) {
 		const term = `%${query.trim().toLowerCase()}%`;
@@ -123,23 +148,19 @@ export async function getPublicQuizzesPaged(options: {
 		);
 	}
 
-	const questionCountSubquery = db
-		.$with('question_counts')
-		.as(
-			db
-				.select({ quizId: question.quizId, questionCount: count().as('questionCount') })
-				.from(question)
-				.groupBy(question.quizId)
-		);
+	const questionCountSubquery = db.$with('question_counts').as(
+		db
+			.select({ quizId: question.quizId, questionCount: count().as('questionCount') })
+			.from(question)
+			.groupBy(question.quizId)
+	);
 
-	const attemptCountSubquery = db
-		.$with('attempt_counts')
-		.as(
-			db
-				.select({ quizId: attempt.quizId, attemptCount: count().as('attemptCount') })
-				.from(attempt)
-				.groupBy(attempt.quizId)
-		);
+	const attemptCountSubquery = db.$with('attempt_counts').as(
+		db
+			.select({ quizId: attempt.quizId, attemptCount: count().as('attemptCount') })
+			.from(attempt)
+			.groupBy(attempt.quizId)
+	);
 
 	let orderBy;
 	switch (sort) {
@@ -147,7 +168,10 @@ export async function getPublicQuizzesPaged(options: {
 			orderBy = [asc(quiz.createdAt)];
 			break;
 		case 'most_popular':
-			orderBy = [desc(sql`coalesce(${attemptCountSubquery.attemptCount}, 0)`), desc(quiz.createdAt)];
+			orderBy = [
+				desc(sql`coalesce(${attemptCountSubquery.attemptCount}, 0)`),
+				desc(quiz.createdAt)
+			];
 			break;
 		case 'alphabetical':
 			orderBy = [asc(sql`lower(${quiz.title})`)];
@@ -169,7 +193,9 @@ export async function getPublicQuizzesPaged(options: {
 			activateAt: quiz.activateAt,
 			expireAt: quiz.expireAt,
 			createdAt: quiz.createdAt,
-			questionCount: sql<number>`coalesce(${questionCountSubquery.questionCount}, 0)`.mapWith(Number),
+			questionCount: sql<number>`coalesce(${questionCountSubquery.questionCount}, 0)`.mapWith(
+				Number
+			),
 			attemptCount: sql<number>`coalesce(${attemptCountSubquery.attemptCount}, 0)`.mapWith(Number)
 		})
 		.from(quiz)

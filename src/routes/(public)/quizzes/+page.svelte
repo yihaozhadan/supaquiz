@@ -40,6 +40,7 @@
 
 	const statusOptions = [
 		{ value: 'active', label: 'Active' },
+		{ value: 'expired', label: 'Expired' },
 		{ value: 'all', label: 'All' }
 	];
 
