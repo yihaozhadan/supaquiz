@@ -17,6 +17,18 @@ import {
 } from '$lib/server/quiz-session';
 import type { Actions, PageServerLoad } from './$types';
 
+function safeParse<T>(value: unknown): T | null {
+	if (value == null || value === '') return null;
+	if (typeof value === 'string') {
+		try {
+			return JSON.parse(value);
+		} catch {
+			return null;
+		}
+	}
+	return value as T;
+}
+
 async function loadQuizMeta(id: string) {
 	const quizData = await db.query.quiz.findFirst({ where: eq(quiz.id, id) });
 	if (!quizData) return null;
@@ -43,7 +55,7 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 			questionCount: quizData.questionCount,
 			timeLimitSeconds: quizData.timeLimitSeconds,
 			maxAttempts: quizData.maxAttempts,
-			intakeFormSchema: quizData.intakeFormSchema as IntakeFormField[]
+			intakeFormSchema: safeParse<IntakeFormField[]>(quizData.intakeFormSchema) ?? []
 		},
 		availability,
 		passwordRequired,
@@ -81,7 +93,7 @@ export const actions: Actions = {
 		}
 
 		const formData = await request.formData();
-		const intakeFormSchema = quizData.intakeFormSchema as IntakeFormField[];
+		const intakeFormSchema = safeParse<IntakeFormField[]>(quizData.intakeFormSchema) ?? [];
 		const intakeFormData: Record<string, unknown> = {};
 
 		for (const field of intakeFormSchema) {
