@@ -156,7 +156,7 @@
 			</Select.Root>
 		</div>
 
-		<Button variant="outline" class="sm:hidden min-h-11" onclick={() => (filterSheetOpen = true)}>
+		<Button variant="outline" class="min-h-11 sm:hidden" onclick={() => (filterSheetOpen = true)}>
 			<SlidersHorizontal class="mr-2 h-4 w-4" />
 			Filters
 		</Button>
@@ -278,7 +278,7 @@
 				</Select.Root>
 			</div>
 
-			<Button class="w-full min-h-11" onclick={() => (filterSheetOpen = false)}>Done</Button>
+			<Button class="min-h-11 w-full" onclick={() => (filterSheetOpen = false)}>Done</Button>
 		</div>
 	</Sheet.Content>
 </Sheet.Root>

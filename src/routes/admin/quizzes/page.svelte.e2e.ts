@@ -53,11 +53,15 @@ test.describe('Quiz CRUD Operations', () => {
 		// Switch to Settings tab to access maxAttempts
 		await page.click('[data-slot="tabs-trigger"]:has-text("Settings")');
 		await page.fill('input[name="maxAttempts"]', '3');
-		await page.locator('form[action="?/update"]').evaluate((form: HTMLFormElement) => form.submit());
+		await page
+			.locator('form[action="?/update"]')
+			.evaluate((form: HTMLFormElement) => form.submit());
 		await page.waitForURL(/\/edit\?\/update/);
 		await page.waitForLoadState('networkidle');
 
-		await expect(page.locator('[role="alert"]')).toContainText('Quiz updated successfully', { timeout: 10000 });
+		await expect(page.locator('[role="alert"]')).toContainText('Quiz updated successfully', {
+			timeout: 10000
+		});
 	});
 
 	test('should duplicate a quiz', async ({ page }) => {
@@ -78,7 +82,9 @@ test.describe('Quiz CRUD Operations', () => {
 		await page.waitForURL(/\/quizzes\?\/duplicate/);
 		await page.waitForLoadState('networkidle');
 
-		await expect(page.locator('[role="alert"]')).toContainText('Quiz duplicated successfully', { timeout: 10000 });
+		await expect(page.locator('[role="alert"]')).toContainText('Quiz duplicated successfully', {
+			timeout: 10000
+		});
 	});
 
 	test('should delete a quiz', async ({ page }) => {
@@ -100,7 +106,9 @@ test.describe('Quiz CRUD Operations', () => {
 		await page.click('[data-slot="alert-dialog-action"] button[type="submit"]');
 		await page.waitForLoadState('networkidle');
 
-		await expect(page.locator('[role="alert"]')).toContainText('Quiz deleted successfully', { timeout: 10000 });
+		await expect(page.locator('[role="alert"]')).toContainText('Quiz deleted successfully', {
+			timeout: 10000
+		});
 	});
 
 	test('should enforce max 5 active quizzes constraint', async ({ page }) => {
@@ -109,7 +117,9 @@ test.describe('Quiz CRUD Operations', () => {
 		// Open the dropdown menu for the first quiz
 		await page.locator('[data-slot="dropdown-menu-trigger"]').first().click();
 
-		const activateButtons = page.locator('[data-slot="dropdown-menu-content"] button:has-text("Activate")');
+		const activateButtons = page.locator(
+			'[data-slot="dropdown-menu-content"] button:has-text("Activate")'
+		);
 		const count = await activateButtons.count();
 
 		if (count > 0) {
@@ -214,6 +224,8 @@ test.describe('Question Editor', () => {
 		await page.waitForLoadState('networkidle');
 		await expect(page.locator('[data-slot="sheet-content"]')).toBeHidden({ timeout: 10000 });
 
-		await expect(page.locator('text=The capital of France is _____')).toBeVisible({ timeout: 10000 });
+		await expect(page.locator('text=The capital of France is _____')).toBeVisible({
+			timeout: 10000
+		});
 	});
 });

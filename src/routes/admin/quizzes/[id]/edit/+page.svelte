@@ -9,7 +9,13 @@
 	import { Switch } from '$lib/components/ui/switch';
 	import * as Select from '$lib/components/ui/select';
 	import * as Tabs from '$lib/components/ui/tabs';
-	import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '$lib/components/ui/card';
+	import {
+		Card,
+		CardHeader,
+		CardTitle,
+		CardContent,
+		CardDescription
+	} from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Separator } from '$lib/components/ui/separator';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
@@ -18,9 +24,20 @@
 	import QuestionEditorSheet from '$lib/components/admin/QuestionEditorSheet.svelte';
 	import { toasts } from '$lib/components/admin/toast';
 	import {
-		ArrowLeft, Plus, Trash2, ChevronUp, ChevronDown,
-		Save, X, Rocket, AlertTriangle, ListChecks, Settings,
-		FileInput, GripVertical, Pencil
+		ArrowLeft,
+		Plus,
+		Trash2,
+		ChevronUp,
+		ChevronDown,
+		Save,
+		X,
+		Rocket,
+		AlertTriangle,
+		ListChecks,
+		Settings,
+		FileInput,
+		GripVertical,
+		Pencil
 	} from 'lucide-svelte';
 
 	let { data, form } = $props();
@@ -57,9 +74,7 @@
 	let activateAt = $state(
 		quiz.activateAt ? new Date(quiz.activateAt).toISOString().slice(0, 16) : ''
 	);
-	let expireAt = $state(
-		quiz.expireAt ? new Date(quiz.expireAt).toISOString().slice(0, 16) : ''
-	);
+	let expireAt = $state(quiz.expireAt ? new Date(quiz.expireAt).toISOString().slice(0, 16) : '');
 
 	interface IntakeField {
 		name: string;
@@ -70,9 +85,10 @@
 	let intakeFields = $state<IntakeField[]>([]);
 
 	$effect(() => {
-		const parsed = typeof quiz.intakeFormSchema === 'string'
-			? JSON.parse(quiz.intakeFormSchema)
-			: quiz.intakeFormSchema;
+		const parsed =
+			typeof quiz.intakeFormSchema === 'string'
+				? JSON.parse(quiz.intakeFormSchema)
+				: quiz.intakeFormSchema;
 		intakeFields = Array.isArray(parsed) ? parsed : [];
 	});
 
@@ -102,10 +118,10 @@
 			mediaUrl: q.mediaUrl || null,
 			options: q.options
 				? (Array.isArray(q.options) ? q.options : JSON.parse(q.options)).map((o: any) => ({
-					id: o.id || crypto.randomUUID(),
-					text: o.text,
-					isCorrect: o.isCorrect
-				}))
+						id: o.id || crypto.randomUUID(),
+						text: o.text,
+						isCorrect: o.isCorrect
+					}))
 				: [],
 			correctAnswer: q.correctAnswer,
 			orderIndex: q.orderIndex
@@ -142,7 +158,10 @@
 
 	const intakeFormJson = $derived(JSON.stringify(intakeFields));
 
-	const questionTypeConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
+	const questionTypeConfig: Record<
+		string,
+		{ label: string; variant: 'default' | 'secondary' | 'outline' }
+	> = {
 		mcq_single: { label: 'Single Choice', variant: 'default' },
 		mcq_multi: { label: 'Multiple Choice', variant: 'secondary' },
 		true_false: { label: 'True/False', variant: 'outline' },
@@ -193,7 +212,9 @@
 </PageHeader>
 
 {#if hasUnsavedChanges}
-	<div class="mb-4 flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-700 px-4 py-2.5 rounded-lg text-sm">
+	<div
+		class="mb-4 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-700"
+	>
 		<AlertTriangle class="size-4 shrink-0" />
 		<span>You have unsaved changes.</span>
 		{#if lastSavedAt}
@@ -202,7 +223,11 @@
 	</div>
 {/if}
 
-<form bind:this={mainForm} method="POST" action="?/update" use:enhance={() => {
+<form
+	bind:this={mainForm}
+	method="POST"
+	action="?/update"
+	use:enhance={() => {
 		isSaving = true;
 		return async ({ update }) => {
 			await update();
@@ -210,7 +235,8 @@
 			hasUnsavedChanges = false;
 			lastSavedAt = new Date();
 		};
-	}}>
+	}}
+>
 	<input type="hidden" name="id" value={quiz.id} />
 	<input type="hidden" name="intakeFormSchema" value={intakeFormJson} />
 	<input type="hidden" name="shuffleQuestions" value={shuffleQuestions ? 'on' : ''} />
@@ -244,17 +270,40 @@
 				<CardContent class="space-y-4">
 					<div class="space-y-2">
 						<label for="title" class="text-sm font-medium text-foreground">Title</label>
-						<Input type="text" name="title" id="title" bind:value={title} required oninput={markChanged} />
+						<Input
+							type="text"
+							name="title"
+							id="title"
+							bind:value={title}
+							required
+							oninput={markChanged}
+						/>
 					</div>
 
 					<div class="space-y-2">
 						<label for="description" class="text-sm font-medium text-foreground">Description</label>
-						<Textarea name="description" id="description" rows={3} bind:value={description} required oninput={markChanged} />
+						<Textarea
+							name="description"
+							id="description"
+							rows={3}
+							bind:value={description}
+							required
+							oninput={markChanged}
+						/>
 					</div>
 
 					<div class="space-y-2">
-						<label for="password" class="text-sm font-medium text-foreground">Password (optional)</label>
-						<Input type="text" name="password" id="password" bind:value={password} oninput={markChanged} placeholder="Leave empty for no password" />
+						<label for="password" class="text-sm font-medium text-foreground"
+							>Password (optional)</label
+						>
+						<Input
+							type="text"
+							name="password"
+							id="password"
+							bind:value={password}
+							oninput={markChanged}
+							placeholder="Leave empty for no password"
+						/>
 					</div>
 				</CardContent>
 			</Card>
@@ -289,30 +338,52 @@
 					{:else}
 						<div class="space-y-3">
 							{#each quiz.questions as q, index (q.id)}
-								<div class="flex items-start gap-3 rounded-lg border border-border bg-muted/30 p-4 transition-colors hover:bg-muted/50">
+								<div
+									class="flex items-start gap-3 rounded-lg border border-border bg-muted/30 p-4 transition-colors hover:bg-muted/50"
+								>
 									<div class="flex flex-col gap-1">
-										<form method="POST" action="?/moveQuestion" use:enhance={() => {
-											return async ({ update }) => { await update(); };
-										}}>
+										<form
+											method="POST"
+											action="?/moveQuestion"
+											use:enhance={() => {
+												return async ({ update }) => {
+													await update();
+												};
+											}}
+										>
 											<input type="hidden" name="questionId" value={q.id} />
 											<input type="hidden" name="direction" value="up" />
-											<button type="submit" disabled={index === 0} class="text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed">
+											<button
+												type="submit"
+												disabled={index === 0}
+												class="text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
+											>
 												<ChevronUp class="size-4" />
 											</button>
 										</form>
-										<form method="POST" action="?/moveQuestion" use:enhance={() => {
-											return async ({ update }) => { await update(); };
-										}}>
+										<form
+											method="POST"
+											action="?/moveQuestion"
+											use:enhance={() => {
+												return async ({ update }) => {
+													await update();
+												};
+											}}
+										>
 											<input type="hidden" name="questionId" value={q.id} />
 											<input type="hidden" name="direction" value="down" />
-											<button type="submit" disabled={index === quiz.questions.length - 1} class="text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed">
+											<button
+												type="submit"
+												disabled={index === quiz.questions.length - 1}
+												class="text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
+											>
 												<ChevronDown class="size-4" />
 											</button>
 										</form>
 									</div>
 
-									<div class="flex-1 min-w-0">
-										<div class="flex items-center gap-2 mb-1">
+									<div class="min-w-0 flex-1">
+										<div class="mb-1 flex items-center gap-2">
 											<span class="text-sm font-medium text-muted-foreground">Q{index + 1}</span>
 											<Badge variant={questionTypeConfig[q.type]?.variant || 'default'}>
 												{questionTypeConfig[q.type]?.label || q.type}
@@ -324,10 +395,10 @@
 												<Badge variant="outline" class="text-xs">Code</Badge>
 											{/if}
 										</div>
-										<p class="text-sm text-foreground line-clamp-2">{q.text}</p>
+										<p class="line-clamp-2 text-sm text-foreground">{q.text}</p>
 									</div>
 
-									<div class="flex items-center gap-1 shrink-0">
+									<div class="flex shrink-0 items-center gap-1">
 										<Button variant="ghost" size="icon-sm" onclick={() => openEditQuestion(q)}>
 											<Pencil class="size-4" />
 											<span class="sr-only">Edit question</span>
@@ -341,7 +412,12 @@
 							{/each}
 						</div>
 						<Separator class="my-4" />
-						<Button onclick={openAddQuestion} variant="outline" class="w-full" disabled={quiz.questions.length >= 50}>
+						<Button
+							onclick={openAddQuestion}
+							variant="outline"
+							class="w-full"
+							disabled={quiz.questions.length >= 50}
+						>
 							<Plus class="size-4" />
 							Add Question
 						</Button>
@@ -355,7 +431,9 @@
 			<Card>
 				<CardHeader>
 					<CardTitle>Intake Form</CardTitle>
-					<CardDescription>Fields to collect from participants before starting the quiz.</CardDescription>
+					<CardDescription
+						>Fields to collect from participants before starting the quiz.</CardDescription
+					>
 				</CardHeader>
 				<CardContent>
 					{#if intakeFields.length === 0}
@@ -372,7 +450,7 @@
 											type="button"
 											disabled={index === 0}
 											onclick={() => moveIntakeField(index, 'up')}
-											class="text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+											class="text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
 										>
 											<ChevronUp class="size-4" />
 										</button>
@@ -380,13 +458,13 @@
 											type="button"
 											disabled={index === intakeFields.length - 1}
 											onclick={() => moveIntakeField(index, 'down')}
-											class="text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+											class="text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
 										>
 											<ChevronDown class="size-4" />
 										</button>
 									</div>
 
-									<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-1">
+									<div class="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-3">
 										<div class="space-y-1.5">
 											<label class="text-xs font-medium text-muted-foreground">Field Name</label>
 											<Input
@@ -412,7 +490,13 @@
 												}}
 											>
 												<Select.Trigger class="w-full">
-													{field.type === 'text' ? 'Text' : field.type === 'email' ? 'Email' : field.type === 'number' ? 'Number' : 'Select'}
+													{field.type === 'text'
+														? 'Text'
+														: field.type === 'email'
+															? 'Email'
+															: field.type === 'number'
+																? 'Number'
+																: 'Select'}
 												</Select.Trigger>
 												<Select.Content>
 													<Select.Item value="text">Text</Select.Item>
@@ -435,11 +519,7 @@
 										</div>
 									</div>
 
-									<Button
-										variant="ghost"
-										size="icon-sm"
-										onclick={() => removeIntakeField(index)}
-									>
+									<Button variant="ghost" size="icon-sm" onclick={() => removeIntakeField(index)}>
 										<Trash2 class="size-4 text-destructive" />
 										<span class="sr-only">Remove field</span>
 									</Button>
@@ -464,21 +544,53 @@
 					<CardDescription>Configure how the quiz behaves.</CardDescription>
 				</CardHeader>
 				<CardContent class="space-y-5">
-					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+					<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 						<div class="space-y-2">
-							<label for="timeLimitSeconds" class="text-sm font-medium text-foreground">Time Limit (seconds)</label>
-							<Input type="number" name="timeLimitSeconds" id="timeLimitSeconds" bind:value={timeLimitSeconds} min="0" placeholder="No limit" oninput={markChanged} />
+							<label for="timeLimitSeconds" class="text-sm font-medium text-foreground"
+								>Time Limit (seconds)</label
+							>
+							<Input
+								type="number"
+								name="timeLimitSeconds"
+								id="timeLimitSeconds"
+								bind:value={timeLimitSeconds}
+								min="0"
+								placeholder="No limit"
+								oninput={markChanged}
+							/>
 						</div>
 						<div class="space-y-2">
-							<label for="maxAttempts" class="text-sm font-medium text-foreground">Max Attempts</label>
-							<Input type="number" name="maxAttempts" id="maxAttempts" bind:value={maxAttempts} min="1" required oninput={markChanged} />
+							<label for="maxAttempts" class="text-sm font-medium text-foreground"
+								>Max Attempts</label
+							>
+							<Input
+								type="number"
+								name="maxAttempts"
+								id="maxAttempts"
+								bind:value={maxAttempts}
+								min="1"
+								required
+								oninput={markChanged}
+							/>
 						</div>
 						<div class="space-y-2">
-							<label for="maxParticipants" class="text-sm font-medium text-foreground">Max Participants</label>
-							<Input type="number" name="maxParticipants" id="maxParticipants" bind:value={maxParticipants} min="1" required oninput={markChanged} />
+							<label for="maxParticipants" class="text-sm font-medium text-foreground"
+								>Max Participants</label
+							>
+							<Input
+								type="number"
+								name="maxParticipants"
+								id="maxParticipants"
+								bind:value={maxParticipants}
+								min="1"
+								required
+								oninput={markChanged}
+							/>
 						</div>
 						<div class="space-y-2">
-							<label for="revealAnswersAfter" class="text-sm font-medium text-foreground">Reveal Answers</label>
+							<label for="revealAnswersAfter" class="text-sm font-medium text-foreground"
+								>Reveal Answers</label
+							>
 							<Select.Root type="single" bind:value={revealAnswersAfter}>
 								<Select.Trigger class="w-full">
 									{revealAnswersAfter === 'immediate' ? 'Immediate' : 'Never'}
@@ -491,7 +603,9 @@
 							<input type="hidden" name="revealAnswersAfter" value={revealAnswersAfter} />
 						</div>
 						<div class="space-y-2">
-							<label for="questionDisplayMode" class="text-sm font-medium text-foreground">Question Display</label>
+							<label for="questionDisplayMode" class="text-sm font-medium text-foreground"
+								>Question Display</label
+							>
 							<Select.Root type="single" bind:value={questionDisplayMode}>
 								<Select.Trigger class="w-full">
 									{questionDisplayMode === 'all_on_one_page' ? 'All on one page' : 'One at a time'}
@@ -507,14 +621,30 @@
 
 					<Separator />
 
-					<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+					<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 						<div class="space-y-2">
-							<label for="activateAt" class="text-sm font-medium text-foreground">Activation Date (optional)</label>
-							<Input type="datetime-local" name="activateAt" id="activateAt" bind:value={activateAt} oninput={markChanged} />
+							<label for="activateAt" class="text-sm font-medium text-foreground"
+								>Activation Date (optional)</label
+							>
+							<Input
+								type="datetime-local"
+								name="activateAt"
+								id="activateAt"
+								bind:value={activateAt}
+								oninput={markChanged}
+							/>
 						</div>
 						<div class="space-y-2">
-							<label for="expireAt" class="text-sm font-medium text-foreground">Expiration Date (optional)</label>
-							<Input type="datetime-local" name="expireAt" id="expireAt" bind:value={expireAt} oninput={markChanged} />
+							<label for="expireAt" class="text-sm font-medium text-foreground"
+								>Expiration Date (optional)</label
+							>
+							<Input
+								type="datetime-local"
+								name="expireAt"
+								id="expireAt"
+								bind:value={expireAt}
+								oninput={markChanged}
+							/>
 						</div>
 					</div>
 
@@ -524,23 +654,41 @@
 						<div class="flex items-center justify-between">
 							<div>
 								<p class="text-sm font-medium text-foreground">Shuffle Questions</p>
-								<p class="text-xs text-muted-foreground">Randomize question order for each participant</p>
+								<p class="text-xs text-muted-foreground">
+									Randomize question order for each participant
+								</p>
 							</div>
-							<Switch bind:checked={shuffleQuestions} onCheckedChange={markChanged} name="shuffleQuestions" />
+							<Switch
+								bind:checked={shuffleQuestions}
+								onCheckedChange={markChanged}
+								name="shuffleQuestions"
+							/>
 						</div>
 						<div class="flex items-center justify-between">
 							<div>
 								<p class="text-sm font-medium text-foreground">Allow Back Navigation</p>
-								<p class="text-xs text-muted-foreground">Let participants go back to previous questions</p>
+								<p class="text-xs text-muted-foreground">
+									Let participants go back to previous questions
+								</p>
 							</div>
-							<Switch bind:checked={allowBackNavigation} onCheckedChange={markChanged} name="allowBackNavigation" />
+							<Switch
+								bind:checked={allowBackNavigation}
+								onCheckedChange={markChanged}
+								name="allowBackNavigation"
+							/>
 						</div>
 						<div class="flex items-center justify-between">
 							<div>
 								<p class="text-sm font-medium text-foreground">Visible After Expiry</p>
-								<p class="text-xs text-muted-foreground">Allow public browsing of questions and answers after the quiz expires</p>
+								<p class="text-xs text-muted-foreground">
+									Allow public browsing of questions and answers after the quiz expires
+								</p>
 							</div>
-							<Switch bind:checked={isVisibleAfterExpiry} onCheckedChange={markChanged} name="isVisibleAfterExpiry" />
+							<Switch
+								bind:checked={isVisibleAfterExpiry}
+								onCheckedChange={markChanged}
+								name="isVisibleAfterExpiry"
+							/>
 						</div>
 					</div>
 				</CardContent>
@@ -549,7 +697,9 @@
 	</Tabs.Root>
 
 	<!-- Sticky Footer -->
-	<div class="sticky bottom-0 -mx-4 sm:-mx-6 mt-6 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 px-4 sm:px-6 py-3">
+	<div
+		class="sticky bottom-0 -mx-4 mt-6 border-t border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:-mx-6 sm:px-6"
+	>
 		<div class="flex items-center justify-between gap-3">
 			<div class="text-sm text-muted-foreground">
 				{#if isSaving}
@@ -572,7 +722,13 @@
 					<Save class="size-4" />
 					Save
 				</Button>
-				<Button type="submit" formaction="?/publish" size="sm" variant="default" disabled={isSaving}>
+				<Button
+					type="submit"
+					formaction="?/publish"
+					size="sm"
+					variant="default"
+					disabled={isSaving}
+				>
 					<Rocket class="size-4" />
 					Publish
 				</Button>
@@ -595,13 +751,17 @@
 		<AlertDialog.Footer>
 			<AlertDialog.Cancel onclick={() => (questionToDelete = null)}>Cancel</AlertDialog.Cancel>
 			<AlertDialog.Action>
-				<form method="POST" action="?/deleteQuestion" use:enhance={() => {
-					return async ({ update }) => {
-						await update();
-						deleteDialogOpen = false;
-						questionToDelete = null;
-					};
-				}}>
+				<form
+					method="POST"
+					action="?/deleteQuestion"
+					use:enhance={() => {
+						return async ({ update }) => {
+							await update();
+							deleteDialogOpen = false;
+							questionToDelete = null;
+						};
+					}}
+				>
 					<input type="hidden" name="id" value={questionToDelete?.id} />
 					<button type="submit" class="w-full text-destructive">Delete</button>
 				</form>

@@ -16,7 +16,7 @@ const isTestEnv = process.env.SESSION_SECRET === 'test-secret-key-for-e2e-testin
 
 function checkRateLimit(ip: string): boolean {
 	if (isTestEnv) return true;
-	
+
 	const now = Date.now();
 	const record = rateLimitMap.get(ip);
 

@@ -30,7 +30,7 @@
 
 <div class="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
 	<h1 class="text-3xl font-bold tracking-tight">About SupaQuiz</h1>
-	<p class="mt-4 text-muted-foreground leading-relaxed">
+	<p class="mt-4 leading-relaxed text-muted-foreground">
 		SupaQuiz is an open-source, self-hosted quiz platform. This page will describe the project, its
 		technology stack, and how to contribute.
 	</p>

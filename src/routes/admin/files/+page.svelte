@@ -78,9 +78,7 @@
 		data.files.filter((f) => {
 			const q = searchQuery.toLowerCase().trim();
 			const matchesSearch =
-				!q ||
-				f.name.toLowerCase().includes(q) ||
-				(f.quizTitle ?? '').toLowerCase().includes(q);
+				!q || f.name.toLowerCase().includes(q) || (f.quizTitle ?? '').toLowerCase().includes(q);
 			const matchesQuiz = quizFilter === 'all' || f.quizId === quizFilter;
 			const matchesKind = kindFilter === 'all' || f.kind === kindFilter;
 			return matchesSearch && matchesQuiz && matchesKind;
@@ -128,13 +126,16 @@
 
 <PageHeader title="Files" description="Browse and manage uploaded media files across quizzes">
 	<div class="flex items-center gap-3">
-		<div class="hidden sm:flex items-center gap-3 text-sm text-muted-foreground">
+		<div class="hidden items-center gap-3 text-sm text-muted-foreground sm:flex">
 			<span>{data.files.length} file{data.files.length === 1 ? '' : 's'}</span>
 			<span aria-hidden="true">&middot;</span>
 			<span>{formatSize(totalSize)}</span>
 			{#if orphanCount > 0}
 				<span aria-hidden="true">&middot;</span>
-				<Badge variant="outline" class="gap-1 text-amber-700 border-amber-300 bg-amber-50 dark:text-amber-400 dark:border-amber-800 dark:bg-amber-950/40">
+				<Badge
+					variant="outline"
+					class="gap-1 border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-400"
+				>
 					<AlertTriangle class="size-3" />
 					{orphanCount} orphaned
 				</Badge>
@@ -144,9 +145,9 @@
 </PageHeader>
 
 <!-- Toolbar: filters + view toggle (6.7.1, 6.7.4) -->
-<div class="flex flex-wrap items-center gap-3 mb-6">
-	<div class="relative flex-1 min-w-[200px] max-w-sm">
-		<Search class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+<div class="mb-6 flex flex-wrap items-center gap-3">
+	<div class="relative max-w-sm min-w-[200px] flex-1">
+		<Search class="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
 		<Input
 			type="text"
 			placeholder="Search files..."
@@ -166,7 +167,9 @@
 		}}
 	>
 		<Select.Trigger class="w-44">
-			{quizFilter === 'all' ? 'All Quizzes' : data.quizzes.find((q) => q.id === quizFilter)?.title ?? 'All Quizzes'}
+			{quizFilter === 'all'
+				? 'All Quizzes'
+				: (data.quizzes.find((q) => q.id === quizFilter)?.title ?? 'All Quizzes')}
 		</Select.Trigger>
 		<Select.Content>
 			<Select.Item value="all">All Quizzes</Select.Item>
@@ -215,7 +218,9 @@
 {#if filteredFiles.length === 0}
 	<EmptyState
 		icon={FolderOpen}
-		title={searchQuery || quizFilter !== 'all' || kindFilter !== 'all' ? 'No files match your filters' : 'No files uploaded yet'}
+		title={searchQuery || quizFilter !== 'all' || kindFilter !== 'all'
+			? 'No files match your filters'
+			: 'No files uploaded yet'}
 		description={searchQuery || quizFilter !== 'all' || kindFilter !== 'all'
 			? 'Try adjusting your search or filter criteria.'
 			: 'Media files uploaded for quiz questions will appear here.'}
@@ -230,7 +235,9 @@
 					{file.orphaned ? 'ring-1 ring-amber-300 dark:ring-amber-700' : ''}"
 			>
 				<!-- Preview area -->
-				<div class="relative aspect-video w-full overflow-hidden bg-muted flex items-center justify-center">
+				<div
+					class="relative flex aspect-video w-full items-center justify-center overflow-hidden bg-muted"
+				>
 					{#if file.kind === 'image'}
 						<img
 							src={rawUrl(file)}
@@ -241,7 +248,7 @@
 					{:else}
 						<div class="flex flex-col items-center gap-2 py-6 text-muted-foreground">
 							<Icon class="size-10" />
-							<span class="text-xs uppercase tracking-wide">{kindLabels[file.kind]}</span>
+							<span class="text-xs tracking-wide uppercase">{kindLabels[file.kind]}</span>
 						</div>
 					{/if}
 
@@ -257,7 +264,7 @@
 				</div>
 
 				<!-- File info -->
-				<div class="p-3 space-y-1">
+				<div class="space-y-1 p-3">
 					<p class="truncate text-sm font-medium text-foreground" title={file.name}>{file.name}</p>
 					<div class="flex items-center justify-between text-xs text-muted-foreground">
 						<span>{formatSize(file.size)}</span>
@@ -273,7 +280,9 @@
 				</div>
 
 				<!-- Hover actions -->
-				<div class="absolute top-2 right-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+				<div
+					class="absolute top-2 right-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+				>
 					<Button
 						variant="destructive"
 						size="icon-sm"
@@ -300,13 +309,17 @@
 		{#snippet cell({ row: file, column })}
 			{@const Icon = kindIcons[file.kind]}
 			{#if column.id === 'name'}
-				<div class="flex items-center gap-2 min-w-0">
+				<div class="flex min-w-0 items-center gap-2">
 					<Icon class="size-4 shrink-0 text-muted-foreground" />
 					<div class="min-w-0">
 						<div class="flex items-center gap-2">
-							<span class="truncate font-medium text-foreground" title={file.name}>{file.name}</span>
+							<span class="truncate font-medium text-foreground" title={file.name}>{file.name}</span
+							>
 							{#if file.orphaned}
-								<Badge variant="outline" class="shrink-0 gap-1 text-amber-700 border-amber-300 bg-amber-50 dark:text-amber-400 dark:border-amber-800 dark:bg-amber-950/40">
+								<Badge
+									variant="outline"
+									class="shrink-0 gap-1 border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-400"
+								>
 									<AlertTriangle class="size-3" />
 									Orphaned
 								</Badge>
@@ -317,7 +330,7 @@
 								href={rawUrl(file)}
 								target="_blank"
 								rel="noopener"
-								class="text-xs text-muted-foreground hover:text-primary transition-colors"
+								class="text-xs text-muted-foreground transition-colors hover:text-primary"
 							>
 								View image
 							</a>

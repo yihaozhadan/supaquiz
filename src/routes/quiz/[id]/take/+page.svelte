@@ -42,7 +42,9 @@
 	}
 
 	function toggleMultiAnswer(questionId: string, optionId: string, checked: boolean) {
-		const current = Array.isArray(answers[questionId]) ? [...(answers[questionId] as string[])] : [];
+		const current = Array.isArray(answers[questionId])
+			? [...(answers[questionId] as string[])]
+			: [];
 		if (checked) {
 			if (!current.includes(optionId)) current.push(optionId);
 		} else {
@@ -130,7 +132,9 @@
 		{/if}
 
 		{#if question.codeSnippet}
-			<pre class="overflow-x-auto rounded-md bg-muted p-4 text-sm"><code>{question.codeSnippet}</code></pre>
+			<pre class="overflow-x-auto rounded-md bg-muted p-4 text-sm"><code
+					>{question.codeSnippet}</code
+				></pre>
 		{/if}
 
 		{#if question.type === 'mcq_single' || question.type === 'true_false'}
@@ -184,7 +188,9 @@
 			{#each data.questions as question, index (question.id)}
 				<Card>
 					<CardHeader>
-						<span class="text-sm text-muted-foreground">Question {index + 1} of {totalQuestions}</span>
+						<span class="text-sm text-muted-foreground"
+							>Question {index + 1} of {totalQuestions}</span
+						>
 						<CardTitle class="text-lg leading-snug">{question.text}</CardTitle>
 					</CardHeader>
 					<CardContent class="space-y-4">
@@ -195,7 +201,10 @@
 		</div>
 
 		{#if form?.error}
-			<div role="alert" class="mt-4 rounded-md bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 text-sm text-center">
+			<div
+				role="alert"
+				class="mt-4 rounded-md border border-destructive/20 bg-destructive/10 px-4 py-3 text-center text-sm text-destructive"
+			>
 				{form.error}
 			</div>
 		{/if}
@@ -230,7 +239,10 @@
 			</Card>
 
 			{#if form?.error}
-				<div role="alert" class="mt-4 rounded-md bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 text-sm text-center">
+				<div
+					role="alert"
+					class="mt-4 rounded-md border border-destructive/20 bg-destructive/10 px-4 py-3 text-center text-sm text-destructive"
+				>
 					{form.error}
 				</div>
 			{/if}

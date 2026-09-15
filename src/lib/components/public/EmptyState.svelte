@@ -20,7 +20,9 @@
 	} = $props();
 </script>
 
-<div class="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 px-4 text-center">
+<div
+	class="flex flex-col items-center justify-center rounded-lg border border-dashed px-4 py-16 text-center"
+>
 	<div class="rounded-full bg-muted p-4">
 		<icon class="h-8 w-8 text-muted-foreground"></icon>
 	</div>

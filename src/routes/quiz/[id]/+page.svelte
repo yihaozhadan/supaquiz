@@ -107,13 +107,13 @@
 					{#if form?.passwordError}
 						<div
 							role="alert"
-							class="rounded-md bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 text-sm text-center"
+							class="rounded-md border border-destructive/20 bg-destructive/10 px-4 py-3 text-center text-sm text-destructive"
 						>
 							{form.passwordError}
 						</div>
 					{/if}
 
-					<Button type="submit" class="w-full min-h-11" disabled={isSubmitting}>
+					<Button type="submit" class="min-h-11 w-full" disabled={isSubmitting}>
 						{#if isSubmitting}
 							<Loader2 class="size-4 animate-spin" />
 						{/if}
@@ -150,7 +150,7 @@
 					</div>
 				</CardHeader>
 				<CardContent>
-					<div class="rounded-md bg-muted p-4 text-sm text-center text-muted-foreground">
+					<div class="rounded-md bg-muted p-4 text-center text-sm text-muted-foreground">
 						This quiz has expired and is no longer accepting submissions. The creator has made the
 						questions and answers visible for reference.
 					</div>
@@ -310,13 +310,13 @@
 					{#if form?.intakeError}
 						<div
 							role="alert"
-							class="rounded-md bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 text-sm text-center"
+							class="rounded-md border border-destructive/20 bg-destructive/10 px-4 py-3 text-center text-sm text-destructive"
 						>
 							{form.intakeError}
 						</div>
 					{/if}
 
-					<Button type="submit" class="w-full min-h-11" disabled={isSubmitting}>
+					<Button type="submit" class="min-h-11 w-full" disabled={isSubmitting}>
 						{#if isSubmitting}
 							<Loader2 class="size-4 animate-spin" />
 						{/if}

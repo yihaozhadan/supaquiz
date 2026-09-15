@@ -96,19 +96,20 @@ describe('Quiz Import/Export', () => {
 
 		it('imports a valid export, creating a draft quiz and its questions', async () => {
 			vi.mocked(db.insert).mockImplementation(
-			((table: any) => ({
-				values: vi.fn((values: any) => {
-					if (Array.isArray(values)) {
-						insertedQuestions.push(...values);
-						return { returning: vi.fn().mockResolvedValue(values) };
-					}
-					insertedQuizzes.push(values);
-					return {
-						returning: vi.fn().mockResolvedValue([{ ...values, id: 'new-quiz-id' }])
-					};
-				})
-			}) as any)
-		);
+				(table: any) =>
+					({
+						values: vi.fn((values: any) => {
+							if (Array.isArray(values)) {
+								insertedQuestions.push(...values);
+								return { returning: vi.fn().mockResolvedValue(values) };
+							}
+							insertedQuizzes.push(values);
+							return {
+								returning: vi.fn().mockResolvedValue([{ ...values, id: 'new-quiz-id' }])
+							};
+						})
+					}) as any
+			);
 
 			const exportData = {
 				version: 1,
@@ -155,19 +156,20 @@ describe('Quiz Import/Export', () => {
 		it('warns when a referenced media file is missing', async () => {
 			vi.mocked(copyQuestionMedia).mockResolvedValue(null);
 			vi.mocked(db.insert).mockImplementation(
-			((table: any) => ({
-				values: vi.fn((values: any) => {
-					if (Array.isArray(values)) {
-						insertedQuestions.push(...values);
-						return { returning: vi.fn().mockResolvedValue(values) };
-					}
-					insertedQuizzes.push(values);
-					return {
-						returning: vi.fn().mockResolvedValue([{ ...values, id: 'new-quiz-id' }])
-					};
-				})
-			}) as any)
-		);
+				(table: any) =>
+					({
+						values: vi.fn((values: any) => {
+							if (Array.isArray(values)) {
+								insertedQuestions.push(...values);
+								return { returning: vi.fn().mockResolvedValue(values) };
+							}
+							insertedQuizzes.push(values);
+							return {
+								returning: vi.fn().mockResolvedValue([{ ...values, id: 'new-quiz-id' }])
+							};
+						})
+					}) as any
+			);
 
 			const exportData = {
 				version: 1,

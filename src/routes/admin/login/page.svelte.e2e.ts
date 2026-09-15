@@ -1,7 +1,9 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('Admin Login Flow', () => {
-	test('should redirect to login when accessing protected route without session', async ({ page }) => {
+	test('should redirect to login when accessing protected route without session', async ({
+		page
+	}) => {
 		await page.goto('/admin');
 		await expect(page).toHaveURL('/admin/login');
 		await expect(page.locator('text=Admin Login')).toBeVisible();

@@ -28,13 +28,13 @@
 			<div class="space-y-3">
 				<div class="flex items-center gap-2">
 					<span
-						class="inline-flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground font-bold"
+						class="inline-flex h-8 w-8 items-center justify-center rounded-md bg-primary font-bold text-primary-foreground"
 					>
 						S
 					</span>
 					<span class="text-lg font-semibold tracking-tight">SupaQuiz</span>
 				</div>
-				<p class="text-sm text-muted-foreground max-w-xs">
+				<p class="max-w-xs text-sm text-muted-foreground">
 					An open-source, self-hosted quiz platform. Build quizzes, collect responses, and grade
 					automatically — all on your own server.
 				</p>
@@ -53,7 +53,7 @@
 							<li>
 								<a
 									href={link.href}
-									class="text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
+									class="rounded text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
 								>
 									{link.label}
 								</a>
@@ -64,9 +64,7 @@
 			{/each}
 		</div>
 
-		<div
-			class="mt-10 flex flex-col items-center justify-between gap-4 border-t pt-6 sm:flex-row"
-		>
+		<div class="mt-10 flex flex-col items-center justify-between gap-4 border-t pt-6 sm:flex-row">
 			<p class="text-sm text-muted-foreground">
 				© {year} SupaQuiz. Licensed under the MIT License.
 			</p>
@@ -80,7 +78,7 @@
 					href="https://github.com/yihaozhadan/supaquiz"
 					target="_blank"
 					rel="noopener noreferrer"
-					class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+					class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
 					aria-label="GitHub repository"
 				>
 					<ExternalLink class="h-5 w-5" />

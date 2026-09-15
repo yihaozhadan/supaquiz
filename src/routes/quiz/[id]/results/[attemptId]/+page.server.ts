@@ -2,7 +2,11 @@ import { error } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { question, quiz } from '$lib/server/db/schema';
-import { getAttemptById, resolveParticipantKey, type IntakeFormField } from '$lib/server/quiz-attempts';
+import {
+	getAttemptById,
+	resolveParticipantKey,
+	type IntakeFormField
+} from '$lib/server/quiz-attempts';
 import { normalizeQuestion } from '$lib/server/quiz-actions';
 import { getParticipantId } from '$lib/server/quiz-session';
 import type { PageServerLoad } from './$types';
@@ -32,7 +36,11 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 	const intakeFormSchema = safeParse<IntakeFormField[]>(quizData.intakeFormSchema) ?? [];
 	const intakeFormData = safeParse<Record<string, unknown>>(attemptData.intakeFormData) ?? {};
 
-	const expectedParticipantKey = resolveParticipantKey(intakeFormSchema, intakeFormData, participantId);
+	const expectedParticipantKey = resolveParticipantKey(
+		intakeFormSchema,
+		intakeFormData,
+		participantId
+	);
 
 	if (expectedParticipantKey !== attemptData.participantKey) {
 		error(403, 'You are not authorized to view this attempt');

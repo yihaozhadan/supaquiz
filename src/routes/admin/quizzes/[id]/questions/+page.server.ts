@@ -1,4 +1,9 @@
-import { getQuizById, createQuestion, updateQuestion, deleteQuestion } from '$lib/server/quiz-actions';
+import {
+	getQuizById,
+	createQuestion,
+	updateQuestion,
+	deleteQuestion
+} from '$lib/server/quiz-actions';
 import { redirect } from '@sveltejs/kit';
 
 export async function load({ params }) {

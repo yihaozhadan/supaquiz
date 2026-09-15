@@ -8,15 +8,7 @@
 	import * as Select from '$lib/components/ui/select';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Label } from '$lib/components/ui/label';
-	import {
-		Plus,
-		Trash2,
-		Upload,
-		FileImage,
-		X,
-		Loader2,
-		Code
-	} from 'lucide-svelte';
+	import { Plus, Trash2, Upload, FileImage, X, Loader2, Code } from 'lucide-svelte';
 
 	type QuestionType = 'mcq_single' | 'mcq_multi' | 'true_false' | 'fitb';
 
@@ -121,17 +113,16 @@
 					const baseOptions = question.options?.length
 						? question.options.map((o) => ({ ...o }))
 						: [
-							{ id: crypto.randomUUID(), text: '', isCorrect: false },
-							{ id: crypto.randomUUID(), text: '', isCorrect: false }
-						];
+								{ id: crypto.randomUUID(), text: '', isCorrect: false },
+								{ id: crypto.randomUUID(), text: '', isCorrect: false }
+							];
 					const correct = question.correctAnswer;
 					const correctIds = new Set(
 						Array.isArray(correct) ? correct.map(String) : correct != null ? [String(correct)] : []
 					);
 					options = baseOptions.map((o) => ({
 						...o,
-						isCorrect:
-							correctIds.has(String(o.id)) || correctIds.has(String(o.text))
+						isCorrect: correctIds.has(String(o.id)) || correctIds.has(String(o.text))
 					}));
 				} else if (question.type === 'true_false') {
 					trueFalseAnswer =
@@ -198,9 +189,7 @@
 	}
 
 	function toggleMultiCorrect(index: number) {
-		options = options.map((opt, i) =>
-			i === index ? { ...opt, isCorrect: !opt.isCorrect } : opt
-		);
+		options = options.map((opt, i) => (i === index ? { ...opt, isCorrect: !opt.isCorrect } : opt));
 	}
 
 	function handleFileSelect(file: File | null) {
@@ -262,7 +251,7 @@
 
 	const mediaIsImage = $derived(
 		(mediaFile && mediaFile.type.startsWith('image/')) ||
-		(mediaUrl && !mediaFile && /\.(jpg|jpeg|png|gif|webp)$/i.test(mediaUrl))
+			(mediaUrl && !mediaFile && /\.(jpg|jpeg|png|gif|webp)$/i.test(mediaUrl))
 	);
 
 	const correctAnswerValue = $derived.by(() => {
@@ -299,8 +288,8 @@
 </script>
 
 <Sheet.Root bind:open>
-	<Sheet.Content side="right" class="w-full sm:max-w-xl overflow-y-auto p-0">
-		<Sheet.Header class="border-b sticky top-0 bg-background z-10">
+	<Sheet.Content side="right" class="w-full overflow-y-auto p-0 sm:max-w-xl">
+		<Sheet.Header class="sticky top-0 z-10 border-b bg-background">
 			<div class="flex items-center gap-2">
 				<Sheet.Title>{isEdit ? 'Edit Question' : 'Add Question'}</Sheet.Title>
 				{#if isEdit}
@@ -317,7 +306,7 @@
 		{#if submitError}
 			<div
 				role="alert"
-				class="mx-4 mt-4 bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-lg text-sm"
+				class="mx-4 mt-4 rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive"
 			>
 				{submitError}
 			</div>
@@ -407,7 +396,7 @@
 										aria-checked={option.isCorrect}
 										aria-label={`Mark option ${index + 1} as correct`}
 										onclick={() => setSingleCorrect(index)}
-										class="size-5 shrink-0 rounded-full border-2 flex items-center justify-center transition-colors cursor-pointer {option.isCorrect
+										class="flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 transition-colors {option.isCorrect
 											? 'border-primary bg-primary'
 											: 'border-input hover:border-primary/50'}"
 									>
@@ -422,12 +411,18 @@
 										aria-checked={option.isCorrect}
 										aria-label={`Mark option ${index + 1} as correct`}
 										onclick={() => toggleMultiCorrect(index)}
-										class="size-5 shrink-0 rounded border-2 flex items-center justify-center transition-colors cursor-pointer {option.isCorrect
+										class="flex size-5 shrink-0 cursor-pointer items-center justify-center rounded border-2 transition-colors {option.isCorrect
 											? 'border-primary bg-primary text-primary-foreground'
 											: 'border-input hover:border-primary/50'}"
 									>
 										{#if option.isCorrect}
-											<svg class="size-3" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2">
+											<svg
+												class="size-3"
+												viewBox="0 0 12 12"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="2"
+											>
 												<path d="M2 6l3 3 5-6" stroke-linecap="round" stroke-linejoin="round" />
 											</svg>
 										{/if}
@@ -436,7 +431,8 @@
 								<Input
 									type="text"
 									value={option.text}
-									oninput={(e) => updateOptionText(index, (e.currentTarget as HTMLInputElement).value)}
+									oninput={(e) =>
+										updateOptionText(index, (e.currentTarget as HTMLInputElement).value)}
 									placeholder={`Option ${index + 1}`}
 									class="flex-1"
 									required
@@ -469,7 +465,7 @@
 							role="radio"
 							aria-checked={trueFalseAnswer === 'true'}
 							onclick={() => (trueFalseAnswer = 'true')}
-							class="flex-1 rounded-lg border-2 px-4 py-3 text-sm font-medium transition-colors cursor-pointer {trueFalseAnswer ===
+							class="flex-1 cursor-pointer rounded-lg border-2 px-4 py-3 text-sm font-medium transition-colors {trueFalseAnswer ===
 							'true'
 								? 'border-primary bg-primary/5 text-primary'
 								: 'border-input hover:border-primary/50'}"
@@ -481,7 +477,7 @@
 							role="radio"
 							aria-checked={trueFalseAnswer === 'false'}
 							onclick={() => (trueFalseAnswer = 'false')}
-							class="flex-1 rounded-lg border-2 px-4 py-3 text-sm font-medium transition-colors cursor-pointer {trueFalseAnswer ===
+							class="flex-1 cursor-pointer rounded-lg border-2 px-4 py-3 text-sm font-medium transition-colors {trueFalseAnswer ===
 							'false'
 								? 'border-primary bg-primary/5 text-primary'
 								: 'border-input hover:border-primary/50'}"
@@ -532,17 +528,19 @@
 					onchange={handleFileInput}
 				/>
 				{#if mediaIsImage && !imageLoadError}
-					<div class="relative rounded-lg border border-border overflow-hidden bg-muted/30">
+					<div class="relative overflow-hidden rounded-lg border border-border bg-muted/30">
 						<img
 							src={mediaFile ? URL.createObjectURL(mediaFile) : mediaUrl!}
 							alt="Media preview"
-							class="w-full max-h-48 object-contain"
-							onerror={() => { if (!mediaFile) imageLoadError = true; }}
+							class="max-h-48 w-full object-contain"
+							onerror={() => {
+								if (!mediaFile) imageLoadError = true;
+							}}
 						/>
 						<button
 							type="button"
 							onclick={clearMedia}
-							class="absolute top-2 right-2 rounded-md bg-background/80 backdrop-blur-sm p-1 hover:bg-background cursor-pointer"
+							class="absolute top-2 right-2 cursor-pointer rounded-md bg-background/80 p-1 backdrop-blur-sm hover:bg-background"
 							aria-label="Remove media"
 						>
 							<X class="size-4" />
@@ -550,9 +548,9 @@
 					</div>
 				{:else if mediaFile || mediaUrl}
 					<div class="flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3">
-						<FileImage class="size-8 text-muted-foreground shrink-0" />
-						<div class="flex-1 min-w-0">
-							<p class="text-sm font-medium text-foreground truncate">
+						<FileImage class="size-8 shrink-0 text-muted-foreground" />
+						<div class="min-w-0 flex-1">
+							<p class="truncate text-sm font-medium text-foreground">
 								{mediaFileName || mediaUrl?.split('/').pop()}
 							</p>
 							<p class="text-xs text-muted-foreground">
@@ -566,7 +564,7 @@
 						<button
 							type="button"
 							onclick={clearMedia}
-							class="text-muted-foreground hover:text-destructive cursor-pointer"
+							class="cursor-pointer text-muted-foreground hover:text-destructive"
 							aria-label="Remove media"
 						>
 							<X class="size-4" />
@@ -586,7 +584,7 @@
 								fileInput?.click();
 							}
 						}}
-						class="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 text-center transition-colors cursor-pointer {isDragging
+						class="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 text-center transition-colors {isDragging
 							? 'border-primary bg-primary/5'
 							: 'border-input hover:border-primary/50 hover:bg-muted/30'}"
 					>
@@ -594,9 +592,7 @@
 						<p class="text-sm text-foreground">
 							<span class="font-medium">Click to upload</span> or drag and drop
 						</p>
-						<p class="text-xs text-muted-foreground">
-							Images, audio, or video (max 50MB)
-						</p>
+						<p class="text-xs text-muted-foreground">Images, audio, or video (max 50MB)</p>
 					</div>
 				{/if}
 				{#if mediaError}
@@ -620,13 +616,14 @@
 				/>
 				{#if codeSnippet.trim()}
 					<div class="rounded-lg border border-border bg-muted/30 p-3">
-						<p class="text-xs font-medium text-muted-foreground mb-2">Preview</p>
-						<pre class="font-mono text-xs text-foreground whitespace-pre-wrap break-words max-h-32 overflow-y-auto">{codeSnippet}</pre>
+						<p class="mb-2 text-xs font-medium text-muted-foreground">Preview</p>
+						<pre
+							class="max-h-32 overflow-y-auto font-mono text-xs break-words whitespace-pre-wrap text-foreground">{codeSnippet}</pre>
 					</div>
 				{/if}
 			</div>
 
-			<Sheet.Footer class="sticky bottom-0 bg-background border-t mt-auto -mx-4 -mb-4">
+			<Sheet.Footer class="sticky bottom-0 -mx-4 mt-auto -mb-4 border-t bg-background">
 				<Button
 					type="button"
 					variant="outline"

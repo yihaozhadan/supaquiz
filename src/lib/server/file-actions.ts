@@ -107,16 +107,9 @@ export async function listFiles(): Promise<FileEntry[]> {
 		// New flat structure: quizzes/<quizId>/<file>
 		// Old nested structure: quizzes/<quizId>/questions/<questionId>/<file>
 		const parts = relToUploads.split(posix.sep);
-		if (
-			parts.length === 3 &&
-			parts[0] === 'quizzes'
-		) {
+		if (parts.length === 3 && parts[0] === 'quizzes') {
 			info = { quizId: parts[1], questionId: null, fileName: parts[2] };
-		} else if (
-			parts.length === 5 &&
-			parts[0] === 'quizzes' &&
-			parts[2] === 'questions'
-		) {
+		} else if (parts.length === 5 && parts[0] === 'quizzes' && parts[2] === 'questions') {
 			info = { quizId: parts[1], questionId: parts[3], fileName: parts[4] };
 		}
 
@@ -154,9 +147,7 @@ export async function getQuizOptions(): Promise<QuizOption[]> {
 }
 
 /** Resolve quiz titles for a set of quiz ids. */
-export async function getQuizTitlesFor(
-	entries: FileEntry[]
-): Promise<Map<string, string>> {
+export async function getQuizTitlesFor(entries: FileEntry[]): Promise<Map<string, string>> {
 	const ids = new Set<string>();
 	for (const e of entries) if (e.quizId) ids.add(e.quizId);
 	if (ids.size === 0) return new Map();

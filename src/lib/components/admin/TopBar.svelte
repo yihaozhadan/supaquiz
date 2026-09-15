@@ -43,7 +43,7 @@
 <header class="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:px-6">
 	<button
 		onclick={onToggleMobile}
-		class="lg:hidden inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+		class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none lg:hidden"
 		aria-label="Open sidebar"
 	>
 		<Menu class="h-5 w-5" />
@@ -67,9 +67,9 @@
 	</Breadcrumb>
 
 	<div class="ml-auto flex items-center gap-3">
-		<span class="text-sm text-muted-foreground hidden sm:inline">{username}</span>
+		<span class="hidden text-sm text-muted-foreground sm:inline">{username}</span>
 		<Avatar.Root class="size-8">
-			<Avatar.Fallback class="bg-primary text-primary-foreground text-xs font-semibold uppercase">
+			<Avatar.Fallback class="bg-primary text-xs font-semibold text-primary-foreground uppercase">
 				{username.charAt(0)}
 			</Avatar.Fallback>
 		</Avatar.Root>

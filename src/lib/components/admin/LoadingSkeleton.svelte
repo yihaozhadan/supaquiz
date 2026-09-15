@@ -27,7 +27,7 @@
 		{/each}
 	</div>
 {:else if variant === 'table'}
-	<div class="rounded-lg border border-border overflow-hidden">
+	<div class="overflow-hidden rounded-lg border border-border">
 		<div class="bg-muted px-4 py-3">
 			<div class="flex items-center gap-4">
 				{#each [40, 20, 15, 15] as w}
@@ -58,9 +58,9 @@
 {:else if variant === 'cards'}
 	<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
 		{#each Array(cards) as _}
-			<div class="rounded-lg border border-border overflow-hidden">
+			<div class="overflow-hidden rounded-lg border border-border">
 				<Skeleton class="aspect-video w-full" />
-				<div class="p-3 space-y-2">
+				<div class="space-y-2 p-3">
 					<Skeleton class="h-4 w-3/4" />
 					<div class="flex justify-between">
 						<Skeleton class="h-3 w-16" />
@@ -75,7 +75,7 @@
 	<div class="space-y-6">
 		<div class="grid grid-cols-3 gap-3">
 			{#each Array(3) as _}
-				<div class="rounded-lg border border-border p-3 text-center space-y-2">
+				<div class="space-y-2 rounded-lg border border-border p-3 text-center">
 					<Skeleton class="mx-auto h-4 w-4" />
 					<Skeleton class="mx-auto h-3 w-12" />
 					<Skeleton class="mx-auto h-6 w-16" />
@@ -84,7 +84,7 @@
 		</div>
 		<div class="space-y-3">
 			{#each Array(4) as _}
-				<div class="rounded-lg border border-border p-3 space-y-2">
+				<div class="space-y-2 rounded-lg border border-border p-3">
 					<Skeleton class="h-4 w-2/3" />
 					<Skeleton class="h-3 w-1/2" />
 				</div>

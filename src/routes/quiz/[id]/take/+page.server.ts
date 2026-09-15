@@ -32,7 +32,10 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 				text: normalized.text,
 				mediaUrl: normalized.mediaUrl,
 				options: normalized.options
-					? (normalized.options as { id?: string; text: string }[]).map((o) => ({ id: o.id, text: o.text }))
+					? (normalized.options as { id?: string; text: string }[]).map((o) => ({
+							id: o.id,
+							text: o.text
+						}))
 					: null,
 				codeSnippet: normalized.codeSnippet
 			};

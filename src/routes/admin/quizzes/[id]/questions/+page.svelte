@@ -37,13 +37,13 @@
 	</a>
 </div>
 
-<h1 class="text-2xl font-bold text-foreground mb-6">Add Question to: {quiz.title}</h1>
+<h1 class="mb-6 text-2xl font-bold text-foreground">Add Question to: {quiz.title}</h1>
 
 <form method="POST" action="?/create" class="space-y-6">
 	<input type="hidden" name="quizId" value={quiz.id} />
 	<input type="hidden" name="orderIndex" value={quiz.questions.length} />
 
-	<div class="bg-card shadow px-4 py-5 sm:rounded-lg sm:p-6 border border-border">
+	<div class="border border-border bg-card px-4 py-5 shadow sm:rounded-lg sm:p-6">
 		<div class="space-y-4">
 			<div>
 				<label for="type" class="block text-sm font-medium text-foreground">Question Type</label>
@@ -51,7 +51,7 @@
 					bind:value={questionType}
 					name="type"
 					id="type"
-					class="mt-1 block w-full border border-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring sm:text-sm bg-background text-foreground"
+					class="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-sm focus:border-ring focus:ring-2 focus:ring-ring focus:outline-none sm:text-sm"
 				>
 					<option value="mcq_single">Multiple Choice (Single Answer)</option>
 					<option value="mcq_multi">Multiple Choice (Multiple Answers)</option>
@@ -67,7 +67,7 @@
 					id="text"
 					rows="3"
 					required
-					class="mt-1 block w-full border border-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring sm:text-sm bg-background text-foreground"
+					class="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-sm focus:border-ring focus:ring-2 focus:ring-ring focus:outline-none sm:text-sm"
 				></textarea>
 			</div>
 
@@ -79,13 +79,13 @@
 					name="explanation"
 					id="explanation"
 					rows="2"
-					class="mt-1 block w-full border border-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring sm:text-sm bg-background text-foreground"
+					class="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-sm focus:border-ring focus:ring-2 focus:ring-ring focus:outline-none sm:text-sm"
 				></textarea>
 			</div>
 
 			{#if questionType === 'mcq_single' || questionType === 'mcq_multi'}
 				<div>
-					<label class="block text-sm font-medium text-foreground mb-2">Options</label>
+					<label class="mb-2 block text-sm font-medium text-foreground">Options</label>
 					<div class="space-y-2">
 						{#each options as option, index}
 							<div class="flex items-center space-x-2">
@@ -96,15 +96,19 @@
 										value={option.id}
 										checked={option.isCorrect}
 										onchange={() => setSingleCorrect(index)}
-										class="h-4 w-4 text-primary focus:ring-ring border-border"
+										class="h-4 w-4 border-border text-primary focus:ring-ring"
 									/>
 								{:else}
 									<input
 										type="checkbox"
 										checked={option.isCorrect}
 										onchange={(e) =>
-											updateOption(index, 'isCorrect', (e.currentTarget as HTMLInputElement).checked)}
-										class="h-4 w-4 text-primary focus:ring-ring border-border rounded"
+											updateOption(
+												index,
+												'isCorrect',
+												(e.currentTarget as HTMLInputElement).checked
+											)}
+										class="h-4 w-4 rounded border-border text-primary focus:ring-ring"
 									/>
 								{/if}
 								<input
@@ -114,7 +118,7 @@
 									oninput={(e) =>
 										updateOption(index, 'text', (e.currentTarget as HTMLInputElement).value)}
 									placeholder="Option text"
-									class="flex-1 border border-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring sm:text-sm bg-background text-foreground"
+									class="flex-1 rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-sm focus:border-ring focus:ring-2 focus:ring-ring focus:outline-none sm:text-sm"
 								/>
 								<input type="hidden" name={`options[${index}].id`} value={option.id} />
 								{#if options.length > 2}
@@ -132,7 +136,7 @@
 					<button
 						type="button"
 						onclick={addOption}
-						class="mt-2 text-blue-600 hover:text-blue-800 text-sm font-medium"
+						class="mt-2 text-sm font-medium text-blue-600 hover:text-blue-800"
 					>
 						+ Add Option
 					</button>
@@ -144,14 +148,14 @@
 				</div>
 			{:else if questionType === 'true_false'}
 				<div>
-					<label class="block text-sm font-medium text-foreground mb-2">Correct Answer</label>
+					<label class="mb-2 block text-sm font-medium text-foreground">Correct Answer</label>
 					<div class="flex space-x-4">
 						<label class="flex items-center">
 							<input
 								type="radio"
 								name="correctAnswer"
 								value="true"
-								class="h-4 w-4 text-primary focus:ring-ring border-border"
+								class="h-4 w-4 border-border text-primary focus:ring-ring"
 							/>
 							<span class="ml-2 text-foreground">True</span>
 						</label>
@@ -160,7 +164,7 @@
 								type="radio"
 								name="correctAnswer"
 								value="false"
-								class="h-4 w-4 text-primary focus:ring-ring border-border"
+								class="h-4 w-4 border-border text-primary focus:ring-ring"
 							/>
 							<span class="ml-2 text-foreground">False</span>
 						</label>
@@ -168,13 +172,15 @@
 				</div>
 			{:else if questionType === 'fitb'}
 				<div>
-					<label for="fitbAnswer" class="block text-sm font-medium text-foreground">Correct Answer</label>
+					<label for="fitbAnswer" class="block text-sm font-medium text-foreground"
+						>Correct Answer</label
+					>
 					<input
 						type="text"
 						name="correctAnswer"
 						id="fitbAnswer"
 						required
-						class="mt-1 block w-full border border-border rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring sm:text-sm bg-background text-foreground"
+						class="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-sm focus:border-ring focus:ring-2 focus:ring-ring focus:outline-none sm:text-sm"
 					/>
 				</div>
 			{/if}
@@ -184,13 +190,13 @@
 	<div class="flex justify-end space-x-3">
 		<a
 			href="/admin/quizzes/{quiz.id}/edit"
-			class="bg-muted text-muted-foreground hover:bg-muted/80 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+			class="rounded-md bg-muted px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/80"
 		>
 			Cancel
 		</a>
 		<button
 			type="submit"
-			class="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+			class="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
 		>
 			Add Question
 		</button>

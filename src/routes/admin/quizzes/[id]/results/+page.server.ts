@@ -1,10 +1,6 @@
 import { redirect, fail } from '@sveltejs/kit';
 import { getQuizById } from '$lib/server/quiz-actions';
-import {
-	getAttemptsByQuiz,
-	getAttemptMetrics,
-	deleteAttempts
-} from '$lib/server/result-actions';
+import { getAttemptsByQuiz, getAttemptMetrics, deleteAttempts } from '$lib/server/result-actions';
 import type { PageServerLoad, Actions } from './$types';
 
 export const load: PageServerLoad = async ({ params }) => {

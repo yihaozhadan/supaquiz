@@ -1,12 +1,5 @@
 <script lang="ts">
-	import {
-		ShieldCheck,
-		PenLine,
-		ListChecks,
-		Lock,
-		FileJson,
-		Smartphone
-	} from 'lucide-svelte';
+	import { ShieldCheck, PenLine, ListChecks, Lock, FileJson, Smartphone } from 'lucide-svelte';
 	import * as Card from '$lib/components/ui/card';
 
 	const features = [
@@ -18,7 +11,8 @@
 		{
 			icon: PenLine,
 			title: 'Easy Quiz Builder',
-			description: 'Create MCQ, true/false, and fill-in-the-blank questions with media and code snippets.'
+			description:
+				'Create MCQ, true/false, and fill-in-the-blank questions with media and code snippets.'
 		},
 		{
 			icon: ListChecks,

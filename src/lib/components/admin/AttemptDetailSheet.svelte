@@ -90,7 +90,12 @@
 		if (answer == null || answer === '') return '—';
 		if (question.type === 'mcq_multi') {
 			const ids = Array.isArray(answer) ? answer : [answer];
-			return ids.map((id) => optionText(question.options, id)).filter(Boolean).join(', ') || '—';
+			return (
+				ids
+					.map((id) => optionText(question.options, id))
+					.filter(Boolean)
+					.join(', ') || '—'
+			);
 		}
 		if (question.type === 'mcq_single') {
 			return optionText(question.options, answer);
@@ -103,7 +108,12 @@
 		if (correct == null) return '—';
 		if (question.type === 'mcq_multi') {
 			const ids = Array.isArray(correct) ? correct : [correct];
-			return ids.map((id) => optionText(question.options, id)).filter(Boolean).join(', ') || '—';
+			return (
+				ids
+					.map((id) => optionText(question.options, id))
+					.filter(Boolean)
+					.join(', ') || '—'
+			);
 		}
 		if (question.type === 'mcq_single') {
 			return optionText(question.options, correct);
@@ -164,7 +174,7 @@
 </script>
 
 <Sheet.Root bind:open>
-	<Sheet.Content side="right" class="sm:max-w-xl overflow-y-auto">
+	<Sheet.Content side="right" class="overflow-y-auto sm:max-w-xl">
 		<Sheet.Header>
 			<Sheet.Title>Attempt Details</Sheet.Title>
 			<Sheet.Description>
@@ -173,7 +183,7 @@
 		</Sheet.Header>
 
 		{#if attempt}
-			<div class="px-4 pb-6 space-y-6">
+			<div class="space-y-6 px-4 pb-6">
 				<!-- Score summary -->
 				<div class="grid grid-cols-3 gap-3">
 					<div class="rounded-lg border border-border bg-muted/40 p-3 text-center">
@@ -216,7 +226,7 @@
 							{#each intakeEntries as entry}
 								<div class="flex justify-between gap-4">
 									<dt class="text-muted-foreground">{entry.field}</dt>
-									<dd class="text-foreground text-right">{entry.value}</dd>
+									<dd class="text-right text-foreground">{entry.value}</dd>
 								</div>
 							{/each}
 						</dl>
@@ -238,33 +248,34 @@
 								<li class="rounded-lg border border-border p-3">
 									<div class="flex items-start justify-between gap-2">
 										<p class="text-sm font-medium text-foreground">
-											<span class="text-muted-foreground">{i + 1}.</span> {q.text}
+											<span class="text-muted-foreground">{i + 1}.</span>
+											{q.text}
 										</p>
 										{#if revealAnswers}
 											<Badge variant={correct ? 'default' : 'destructive'} class="shrink-0">
 												{#if correct}
-													<Check class="size-3 mr-1" />Correct
+													<Check class="mr-1 size-3" />Correct
 												{:else}
-													<X class="size-3 mr-1" />Incorrect
+													<X class="mr-1 size-3" />Incorrect
 												{/if}
 											</Badge>
 										{/if}
 									</div>
 									<div class="mt-2 space-y-1 text-sm">
 										<div class="flex gap-2">
-											<span class="text-muted-foreground shrink-0">Answer:</span>
+											<span class="shrink-0 text-muted-foreground">Answer:</span>
 											<span class="text-foreground">{formatAnswer(q, answer)}</span>
 										</div>
 										{#if revealAnswers}
 											<div class="flex gap-2">
-												<span class="text-muted-foreground shrink-0">Correct:</span>
-												<span class="text-foreground font-medium">
+												<span class="shrink-0 text-muted-foreground">Correct:</span>
+												<span class="font-medium text-foreground">
 													{formatCorrect(q)}
 												</span>
 											</div>
 											{#if q.explanation}
 												<div class="flex gap-2">
-													<span class="text-muted-foreground shrink-0">Explanation:</span>
+													<span class="shrink-0 text-muted-foreground">Explanation:</span>
 													<span class="text-foreground">{q.explanation}</span>
 												</div>
 											{/if}
