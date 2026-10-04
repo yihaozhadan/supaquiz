@@ -1,6 +1,12 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
+	import {
+		Card,
+		CardContent,
+		CardHeader,
+		CardTitle,
+		CardDescription
+	} from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Textarea } from '$lib/components/ui/textarea';
@@ -16,7 +22,16 @@
 	let isSubmitting = $state(false);
 	let shuffleQuestions = $state(false);
 	let allowBackNavigation = $state(true);
+	let isVisibleAfterExpiry = $state(true);
+	let questionDisplayMode = $state('one_at_a_time');
 	let revealAnswersAfter = $state('immediate');
+	let unlimitedAttempts = $state(false);
+	let timeLimitMinutes = $state('');
+	const timeLimitSecondsValue = $derived(
+		timeLimitMinutes !== '' && Number.isFinite(Number(timeLimitMinutes))
+			? String(Math.round(Number(timeLimitMinutes) * 60))
+			: ''
+	);
 
 	$effect(() => {
 		if (form?.error) toasts.error(form.error);
@@ -31,15 +46,23 @@
 	</Button>
 </PageHeader>
 
-<form method="POST" class="space-y-6" use:enhance={() => {
+<form
+	method="POST"
+	class="space-y-6"
+	use:enhance={() => {
 		isSubmitting = true;
-		return async () => {
+		return async ({ result, update }) => {
+			await update();
+			if (result.type === 'redirect') return;
 			isSubmitting = false;
 		};
-	}}>
+	}}
+>
 	<input type="hidden" name="shuffleQuestions" value={shuffleQuestions ? 'on' : ''} />
 	<input type="hidden" name="allowBackNavigation" value={allowBackNavigation ? 'on' : ''} />
+	<input type="hidden" name="isVisibleAfterExpiry" value={isVisibleAfterExpiry ? 'on' : ''} />
 	<input type="hidden" name="revealAnswersAfter" value={revealAnswersAfter} />
+	<input type="hidden" name="questionDisplayMode" value={questionDisplayMode} />
 
 	<Card>
 		<CardHeader>
@@ -49,15 +72,35 @@
 		<CardContent class="space-y-4">
 			<div class="space-y-2">
 				<Label for="title">Title</Label>
-				<Input type="text" name="title" id="title" required placeholder="Enter quiz title" disabled={isSubmitting} />
+				<Input
+					type="text"
+					name="title"
+					id="title"
+					required
+					placeholder="Enter quiz title"
+					disabled={isSubmitting}
+				/>
 			</div>
 			<div class="space-y-2">
 				<Label for="description">Description</Label>
-				<Textarea name="description" id="description" rows={3} required placeholder="Enter quiz description" disabled={isSubmitting} />
+				<Textarea
+					name="description"
+					id="description"
+					rows={3}
+					required
+					placeholder="Enter quiz description"
+					disabled={isSubmitting}
+				/>
 			</div>
 			<div class="space-y-2">
 				<Label for="password">Password (optional)</Label>
-				<Input type="text" name="password" id="password" placeholder="Leave empty for no password" disabled={isSubmitting} />
+				<Input
+					type="text"
+					name="password"
+					id="password"
+					placeholder="Leave empty for no password"
+					disabled={isSubmitting}
+				/>
 			</div>
 		</CardContent>
 	</Card>
@@ -68,18 +111,47 @@
 			<CardDescription>Configure how the quiz behaves.</CardDescription>
 		</CardHeader>
 		<CardContent class="space-y-5">
-			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 				<div class="space-y-2">
-					<Label for="timeLimitSeconds">Time Limit (seconds, optional)</Label>
-					<Input type="number" name="timeLimitSeconds" id="timeLimitSeconds" min="0" placeholder="No limit" disabled={isSubmitting} />
+					<Label for="timeLimitMinutes">Time Limit (minutes, optional)</Label>
+					<Input
+						type="number"
+						name="timeLimitMinutes"
+						id="timeLimitMinutes"
+						bind:value={timeLimitMinutes}
+						min="0"
+						step="any"
+						placeholder="No limit"
+						disabled={isSubmitting}
+					/>
+					<input type="hidden" name="timeLimitSeconds" value={timeLimitSecondsValue} />
 				</div>
 				<div class="space-y-2">
 					<Label for="maxAttempts">Max Attempts</Label>
-					<Input type="number" name="maxAttempts" id="maxAttempts" value="1" min="1" required disabled={isSubmitting} />
+					<Input
+						type="number"
+						name="maxAttempts"
+						id="maxAttempts"
+						value="1"
+						min="1"
+						required
+						disabled={isSubmitting || unlimitedAttempts}
+						placeholder={unlimitedAttempts ? 'Unlimited' : ''}
+					/>
+					{#if unlimitedAttempts}
+						<input type="hidden" name="maxAttempts" value="" />
+					{/if}
 				</div>
 				<div class="space-y-2">
-					<Label for="maxParticipants">Max Participants</Label>
-					<Input type="number" name="maxParticipants" id="maxParticipants" min="1" required disabled={isSubmitting} />
+					<Label for="maxParticipants">Max Participants (optional)</Label>
+					<Input
+						type="number"
+						name="maxParticipants"
+						id="maxParticipants"
+						min="1"
+						placeholder="No limit"
+						disabled={isSubmitting}
+					/>
 				</div>
 				<div class="space-y-2">
 					<Label for="revealAnswersAfter">Reveal Answers After</Label>
@@ -93,22 +165,64 @@
 						</Select.Content>
 					</Select.Root>
 				</div>
+				<div class="space-y-2">
+					<Label for="questionDisplayMode">Question Display</Label>
+					<Select.Root type="single" bind:value={questionDisplayMode}>
+						<Select.Trigger id="questionDisplayMode" class="w-full">
+							{questionDisplayMode === 'all_on_one_page' ? 'All on one page' : 'One at a time'}
+						</Select.Trigger>
+						<Select.Content>
+							<Select.Item value="one_at_a_time">One at a time</Select.Item>
+							<Select.Item value="all_on_one_page">All on one page</Select.Item>
+						</Select.Content>
+					</Select.Root>
+				</div>
 			</div>
 
 			<div class="space-y-4">
 				<div class="flex items-center justify-between">
 					<div>
 						<Label for="shuffleQuestions">Shuffle Questions</Label>
-						<p class="text-xs text-muted-foreground">Randomize question order for each participant</p>
+						<p class="text-xs text-muted-foreground">
+							Randomize question order for each participant
+						</p>
 					</div>
 					<Switch id="shuffleQuestions" bind:checked={shuffleQuestions} disabled={isSubmitting} />
 				</div>
 				<div class="flex items-center justify-between">
 					<div>
 						<Label for="allowBackNavigation">Allow Back Navigation</Label>
-						<p class="text-xs text-muted-foreground">Let participants go back to previous questions</p>
+						<p class="text-xs text-muted-foreground">
+							Let participants go back to previous questions
+						</p>
 					</div>
-					<Switch id="allowBackNavigation" bind:checked={allowBackNavigation} disabled={isSubmitting} />
+					<Switch
+						id="allowBackNavigation"
+						bind:checked={allowBackNavigation}
+						disabled={isSubmitting}
+					/>
+				</div>
+				<div class="flex items-center justify-between">
+					<div>
+						<Label for="unlimitedAttempts">Unlimited Attempts</Label>
+						<p class="text-xs text-muted-foreground">
+							Let participants retake the quiz without an attempt limit
+						</p>
+					</div>
+					<Switch id="unlimitedAttempts" bind:checked={unlimitedAttempts} disabled={isSubmitting} />
+				</div>
+				<div class="flex items-center justify-between">
+					<div>
+						<Label for="isVisibleAfterExpiry">Visible After Expiry</Label>
+						<p class="text-xs text-muted-foreground">
+							Allow public browsing of questions and answers after the quiz expires
+						</p>
+					</div>
+					<Switch
+						id="isVisibleAfterExpiry"
+						bind:checked={isVisibleAfterExpiry}
+						disabled={isSubmitting}
+					/>
 				</div>
 			</div>
 		</CardContent>

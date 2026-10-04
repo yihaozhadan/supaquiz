@@ -80,16 +80,18 @@
 	ontouchend={handleTouchEnd}
 	aria-label="Main navigation"
 >
-	<div class="flex h-14 items-center border-b border-sidebar-border px-3 {collapsed ? 'justify-center' : 'justify-between'}">
+	<div
+		class="flex h-14 items-center border-b border-sidebar-border px-3 {collapsed
+			? 'justify-center'
+			: 'justify-between'}"
+	>
 		{#if !collapsed}
-			<a href="/admin" class="text-lg font-semibold text-sidebar-foreground truncate">
-				SupaQuiz
-			</a>
+			<a href="/admin" class="truncate text-lg font-semibold text-sidebar-foreground"> SupaQuiz </a>
 		{/if}
 		<div class="flex items-center gap-1">
 			<button
 				onclick={toggleCollapse}
-				class="hidden lg:inline-flex h-9 w-9 items-center justify-center rounded-md text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+				class="hidden h-9 w-9 items-center justify-center rounded-md text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-none lg:inline-flex"
 				aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
 				aria-expanded={!collapsed}
 			>
@@ -101,7 +103,7 @@
 			</button>
 			<button
 				onclick={closeMobile}
-				class="lg:hidden h-9 w-9 items-center justify-center rounded-md text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+				class="h-9 w-9 items-center justify-center rounded-md text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-none lg:hidden"
 				aria-label="Close sidebar"
 			>
 				<X class="h-4 w-4" />
@@ -109,14 +111,14 @@
 		</div>
 	</div>
 
-	<nav class="flex-1 overflow-y-auto py-3 px-2" aria-label="Sidebar navigation">
+	<nav class="flex-1 overflow-y-auto px-2 py-3" aria-label="Sidebar navigation">
 		<ul class="space-y-1">
 			{#each navItems as item}
 				<li>
 					<a
 						href={item.href}
 						onclick={closeMobile}
-						class="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors min-h-11
+						class="flex min-h-11 items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors
 							{isActive(item.href, item.exact)
 							? 'bg-sidebar-accent text-sidebar-accent-foreground'
 							: 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'}
@@ -137,7 +139,7 @@
 	<div class="border-t border-sidebar-border p-2">
 		<a
 			href="/admin/logout"
-			class="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 hover:bg-destructive/10 hover:text-destructive transition-colors min-h-11
+			class="flex min-h-11 items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 transition-colors hover:bg-destructive/10 hover:text-destructive
 				{collapsed ? 'justify-center' : ''}"
 			title={collapsed ? 'Logout' : undefined}
 		>

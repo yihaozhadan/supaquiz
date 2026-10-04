@@ -59,11 +59,7 @@
 	</div>
 
 	<div class="mt-6 max-w-md">
-		<SearchBar
-			placeholder="Search available quizzes..."
-			onSearch={handleSearch}
-			{loading}
-		/>
+		<SearchBar placeholder="Search available quizzes..." onSearch={handleSearch} {loading} />
 	</div>
 
 	<div class="mt-8">

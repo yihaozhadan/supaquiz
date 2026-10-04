@@ -1,7 +1,9 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('Admin Login Flow', () => {
-	test('should redirect to login when accessing protected route without session', async ({ page }) => {
+	test('should redirect to login when accessing protected route without session', async ({
+		page
+	}) => {
 		await page.goto('/admin');
 		await expect(page).toHaveURL('/admin/login');
 		await expect(page.locator('text=Admin Login')).toBeVisible();
@@ -12,10 +14,13 @@ test.describe('Admin Login Flow', () => {
 
 		await page.fill('input[name="username"]', 'admin');
 		await page.fill('input[name="password"]', 'wrongpassword');
-		await page.locator('form').evaluate((form) => form.submit());
-		await page.waitForLoadState('networkidle');
+		await page.click('button[type="submit"]');
 
-		await expect(page.locator('text=Invalid credentials')).toBeVisible();
+		await expect(page.getByRole('alert')).toContainText('Invalid credentials');
+		await expect(page).toHaveURL('/admin/login');
+		// Username is preserved, password is cleared
+		await expect(page.locator('input[name="username"]')).toHaveValue('admin');
+		await expect(page.locator('input[name="password"]')).toHaveValue('');
 	});
 
 	test('should login successfully with valid credentials and redirect to dashboard', async ({
@@ -25,8 +30,7 @@ test.describe('Admin Login Flow', () => {
 
 		await page.fill('input[name="username"]', 'admin');
 		await page.fill('input[name="password"]', 'password123');
-		await page.locator('form').evaluate((form) => form.submit());
-		await page.waitForLoadState('networkidle');
+		await page.click('button[type="submit"]');
 
 		await expect(page).toHaveURL('/admin');
 		await expect(page.locator('h1')).toContainText('Dashboard');
@@ -38,7 +42,7 @@ test.describe('Admin Login Flow', () => {
 		await page.goto('/admin/login');
 		await page.fill('input[name="username"]', 'admin');
 		await page.fill('input[name="password"]', 'password123');
-		await page.locator('form').evaluate((form) => form.submit());
+		await page.click('button[type="submit"]');
 		await page.waitForURL('/admin');
 		await page.waitForLoadState('networkidle');
 

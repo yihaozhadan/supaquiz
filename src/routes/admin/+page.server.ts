@@ -41,18 +41,12 @@ export const load: PageServerLoad = async () => {
 
 	const mappedAttempts = recentAttempts.map((a) => {
 		let participantName = 'Anonymous';
-		try {
-			const formData = JSON.parse(a.intakeFormData as string) as Array<{
-				field: string;
-				value: string;
-			}>;
-			const nameField = formData.find(
-				(f) => f.field === 'name' || f.field === 'Name' || f.field === 'fullName'
-			);
-			if (nameField?.value) participantName = nameField.value;
-		} catch {
-			// ignore parse errors
-		}
+		const formData = a.intakeFormData as Record<string, unknown>;
+		const nameKey = Object.keys(formData ?? {}).find(
+			(key) => key.toLowerCase() === 'name' || key.toLowerCase() === 'fullname'
+		);
+		const nameValue = nameKey ? formData[nameKey] : undefined;
+		if (typeof nameValue === 'string' && nameValue.trim()) participantName = nameValue;
 		return {
 			id: a.id,
 			quizId: a.quizId,

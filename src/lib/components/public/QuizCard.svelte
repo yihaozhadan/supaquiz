@@ -47,7 +47,10 @@
 		<div class="flex items-start justify-between gap-2">
 			<Card.Title class="text-lg leading-snug">{title}</Card.Title>
 			{#if isPasswordProtected}
-				<Lock class="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-label="Password protected" />
+				<Lock
+					class="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
+					aria-label="Password protected"
+				/>
 			{/if}
 		</div>
 		<Card.Description class="line-clamp-2">{description}</Card.Description>
@@ -68,7 +71,8 @@
 		<div class="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
 			<span class="inline-flex items-center gap-1.5">
 				<FileQuestion class="h-4 w-4" />
-				{questionCount} {questionCount === 1 ? 'question' : 'questions'}
+				{questionCount}
+				{questionCount === 1 ? 'question' : 'questions'}
 			</span>
 			{#if timeLimitSeconds}
 				<span class="inline-flex items-center gap-1.5">
@@ -78,7 +82,8 @@
 			{/if}
 			<span class="inline-flex items-center gap-1.5">
 				<Users class="h-4 w-4" />
-				{attemptCount} {attemptCount === 1 ? 'attempt' : 'attempts'}
+				{attemptCount}
+				{attemptCount === 1 ? 'attempt' : 'attempts'}
 			</span>
 		</div>
 	</Card.Content>
@@ -86,7 +91,10 @@
 	<Card.Footer>
 		<a
 			href={`/quiz/${id}`}
-			class={buttonVariants({ variant: 'outline', class: 'w-full min-h-11 group-hover:border-primary/50' })}
+			class={buttonVariants({
+				variant: 'outline',
+				class: 'min-h-11 w-full group-hover:border-primary/50'
+			})}
 		>
 			Start Quiz
 			<ArrowRight class="ml-1.5 h-4 w-4" />

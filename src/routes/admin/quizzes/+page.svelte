@@ -89,19 +89,19 @@
 
 <PageHeader title="Quizzes" description="Manage your quizzes and track participant engagement">
 	<Button href="/admin/quizzes/import" variant="outline">
-		<Upload class="size-4 mr-2" />
+		<Upload class="mr-2 size-4" />
 		Import
 	</Button>
 	<Button href="/admin/quizzes/new">
-		<Plus class="size-4 mr-2" />
+		<Plus class="mr-2 size-4" />
 		New Quiz
 	</Button>
 </PageHeader>
 
 <!-- Toolbar -->
-<div class="flex items-center gap-4 mb-6">
-	<div class="relative flex-1 max-w-sm">
-		<Search class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+<div class="mb-6 flex items-center gap-4">
+	<div class="relative max-w-sm flex-1">
+		<Search class="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
 		<Input
 			type="text"
 			placeholder="Search quizzes..."
@@ -134,7 +134,9 @@
 
 {#if filteredQuizzes.length === 0}
 	<EmptyState
-		title={searchQuery || statusFilter !== 'all' ? 'No quizzes match your filters' : 'No quizzes yet'}
+		title={searchQuery || statusFilter !== 'all'
+			? 'No quizzes match your filters'
+			: 'No quizzes yet'}
 		description={searchQuery || statusFilter !== 'all'
 			? 'Try adjusting your search or filter criteria.'
 			: 'Create your first quiz to get started.'}
@@ -155,7 +157,7 @@
 				<div>
 					<div class="font-medium text-foreground">{quiz.title}</div>
 					{#if quiz.description}
-						<div class="text-muted-foreground text-xs truncate max-w-xs">{quiz.description}</div>
+						<div class="max-w-xs truncate text-xs text-muted-foreground">{quiz.description}</div>
 					{/if}
 				</div>
 			{:else if column.id === 'status'}
@@ -180,28 +182,28 @@
 						<DropdownMenu.Content align="end">
 							<a href="/admin/quizzes/{quiz.id}/edit" class="contents">
 								<DropdownMenu.Item>
-									<Pencil class="size-4 mr-2" />
+									<Pencil class="mr-2 size-4" />
 									Edit
 								</DropdownMenu.Item>
 							</a>
 							<a href="/admin/quizzes/{quiz.id}/results" class="contents">
 								<DropdownMenu.Item>
-									<BarChart3 class="size-4 mr-2" />
+									<BarChart3 class="mr-2 size-4" />
 									View Results
 								</DropdownMenu.Item>
 							</a>
 							<DropdownMenu.Separator />
 							<a href="/admin/quizzes/{quiz.id}/export" class="contents">
 								<DropdownMenu.Item>
-									<FileJson class="size-4 mr-2" />
+									<FileJson class="mr-2 size-4" />
 									Export
 								</DropdownMenu.Item>
 							</a>
 							<DropdownMenu.Item>
 								<form method="POST" action="?/duplicate" class="w-full">
 									<input type="hidden" name="id" value={quiz.id} />
-									<button type="submit" class="flex items-center w-full">
-										<Copy class="size-4 mr-2" />
+									<button type="submit" class="flex w-full items-center">
+										<Copy class="mr-2 size-4" />
 										Duplicate
 									</button>
 								</form>
@@ -214,23 +216,20 @@
 										name="status"
 										value={quiz.status === 'draft' ? 'active' : 'draft'}
 									/>
-									<button type="submit" class="flex items-center w-full">
+									<button type="submit" class="flex w-full items-center">
 										{#if quiz.status === 'draft'}
-											<Download class="size-4 mr-2" />
+											<Download class="mr-2 size-4" />
 											Activate
 										{:else}
-											<Download class="size-4 mr-2" />
+											<Download class="mr-2 size-4" />
 											Deactivate
 										{/if}
 									</button>
 								</form>
 							</DropdownMenu.Item>
 							<DropdownMenu.Separator />
-							<DropdownMenu.Item
-								variant="destructive"
-								onSelect={() => handleDeleteClick(quiz)}
-							>
-								<Trash2 class="size-4 mr-2" />
+							<DropdownMenu.Item variant="destructive" onSelect={() => handleDeleteClick(quiz)}>
+								<Trash2 class="mr-2 size-4" />
 								Delete
 							</DropdownMenu.Item>
 						</DropdownMenu.Content>
@@ -247,8 +246,8 @@
 		<AlertDialog.Header>
 			<AlertDialog.Title>Delete Quiz</AlertDialog.Title>
 			<AlertDialog.Description>
-				Are you sure you want to delete "{quizToDelete?.title}"? This action cannot be undone.
-				All questions and attempts for this quiz will be permanently deleted.
+				Are you sure you want to delete "{quizToDelete?.title}"? This action cannot be undone. All
+				questions and attempts for this quiz will be permanently deleted.
 			</AlertDialog.Description>
 		</AlertDialog.Header>
 		<AlertDialog.Footer>

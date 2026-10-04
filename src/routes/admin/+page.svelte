@@ -34,8 +34,16 @@
 
 	const statusConfig = [
 		{ key: 'draft' as const, label: 'Draft', color: 'bg-secondary text-secondary-foreground' },
-		{ key: 'active' as const, label: 'Active', color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' },
-		{ key: 'expired' as const, label: 'Expired', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' }
+		{
+			key: 'active' as const,
+			label: 'Active',
+			color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
+		},
+		{
+			key: 'expired' as const,
+			label: 'Expired',
+			color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+		}
 	];
 
 	function formatTime(seconds: number): string {
@@ -69,7 +77,7 @@
 				<CardContent class="p-4">
 					<div class="flex items-center justify-between">
 						<div>
-							<p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+							<p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
 								{stat.label}
 							</p>
 							<p class="mt-1 text-2xl font-bold text-foreground">{stat.value}</p>
@@ -91,7 +99,12 @@
 				<CardHeader class="pb-3">
 					<div class="flex items-center justify-between">
 						<CardTitle class="text-base">Recent Activity</CardTitle>
-						<Button href="/admin/quizzes" variant="ghost" size="sm" class="cursor-pointer gap-1 text-xs">
+						<Button
+							href="/admin/quizzes"
+							variant="ghost"
+							size="sm"
+							class="cursor-pointer gap-1 text-xs"
+						>
 							View all
 							<ArrowRight class="h-3 w-3" />
 						</Button>
@@ -107,7 +120,9 @@
 					{:else}
 						<div class="space-y-1">
 							{#each data.recentAttempts as attempt, i}
-								<div class="flex items-center justify-between rounded-md px-3 py-2.5 transition-colors duration-150 hover:bg-muted/50">
+								<div
+									class="flex items-center justify-between rounded-md px-3 py-2.5 transition-colors duration-150 hover:bg-muted/50"
+								>
 									<div class="min-w-0 flex-1">
 										<div class="flex items-center gap-2">
 											<span class="truncate text-sm font-medium text-foreground">
@@ -119,7 +134,9 @@
 											</span>
 										</div>
 										<p class="mt-0.5 text-xs text-muted-foreground">
-											{formatTime(attempt.timeTakenSeconds)} &middot; {relativeTime(attempt.submittedAt)}
+											{formatTime(attempt.timeTakenSeconds)} &middot; {relativeTime(
+												attempt.submittedAt
+											)}
 										</p>
 									</div>
 									<div class="ml-4 shrink-0">
@@ -174,7 +191,8 @@
 								</div>
 								<div class="h-2 w-full overflow-hidden rounded-full bg-muted">
 									<div
-										class="h-full rounded-full transition-all duration-500 ease-out {s.key === 'active'
+										class="h-full rounded-full transition-all duration-500 ease-out {s.key ===
+										'active'
 											? 'bg-emerald-500'
 											: s.key === 'expired'
 												? 'bg-red-400'

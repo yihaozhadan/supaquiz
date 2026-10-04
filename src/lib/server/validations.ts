@@ -12,12 +12,15 @@ export const quizCreateSchema = z.object({
 	password: z.string().min(0).max(100).optional(),
 	timeLimitSeconds: z.number().int().min(0).optional(),
 	shuffleQuestions: z.boolean().default(false),
-	maxAttempts: z.number().int().min(1).default(1),
-	maxParticipants: z.number().int().min(1),
+	maxAttempts: z.number().int().min(1).nullable().default(1),
+	maxParticipants: z.number().int().min(1).nullable().default(null),
 	allowBackNavigation: z.boolean().default(true),
+	questionDisplayMode: z.enum(['one_at_a_time', 'all_on_one_page']).default('one_at_a_time'),
 	revealAnswersAfter: z.enum(['immediate', 'never']).default('immediate'),
 	intakeFormSchema: z.array(intakeFormFieldSchema).default([]),
 	status: z.enum(['draft', 'active', 'expired']).default('draft'),
+	isPublic: z.boolean().default(true),
+	isVisibleAfterExpiry: z.boolean().default(true),
 	activateAt: z.coerce.date().optional(),
 	expireAt: z.coerce.date().optional()
 });
@@ -36,7 +39,13 @@ export const questionCreateSchema = z.object({
 	quizId: z.uuid(),
 	type: z.enum(['mcq_single', 'mcq_multi', 'true_false', 'fitb']),
 	text: z.string().min(1).max(2000),
-	mediaUrl: z.string().max(500).optional(),
+	mediaUrl: z
+		.string()
+		.max(500)
+		.refine((v) => /^https?:\/\//i.test(v) || v.startsWith('/'), {
+			message: 'Media URL must be an absolute path or an http(s) URL'
+		})
+		.optional(),
 	options: z.array(questionOptionSchema).optional(),
 	correctAnswer: z.union([
 		z.string(), // For fitb and true_false
@@ -75,12 +84,14 @@ export const quizExportSchema = z.object({
 		password: z.string().nullable().optional(),
 		timeLimitSeconds: z.number().int().min(0).nullable().optional(),
 		shuffleQuestions: z.boolean().default(false),
-		maxAttempts: z.number().int().min(1).default(1),
-		maxParticipants: z.number().int().min(1),
+		maxAttempts: z.number().int().min(1).nullable().default(1),
+		maxParticipants: z.number().int().min(1).nullable().default(null),
 		allowBackNavigation: z.boolean().default(true),
+		questionDisplayMode: z.enum(['one_at_a_time', 'all_on_one_page']).default('one_at_a_time'),
 		revealAnswersAfter: z.enum(['immediate', 'never']).default('immediate'),
 		intakeFormSchema: z.array(intakeFormFieldSchema).default([]),
-		isPublic: z.boolean().default(true)
+		isPublic: z.boolean().default(true),
+		isVisibleAfterExpiry: z.boolean().default(true)
 	}),
 	questions: z.array(quizExportQuestionSchema).max(50)
 });

@@ -9,7 +9,8 @@ export default defineConfig({
 		env: {
 			DATABASE_URL: './data/supaquiz-test.db',
 			ADMIN_USER: 'admin',
-			ADMIN_PASS_HASH: 'JGFyZ29uMmlkJHY9MTkkbT02NTUzNix0PTMscD00JEI1NkdoMHVNVUQ2dnQ2Z0hOcGtWRUEkWEZRV3RqdFg2YkV6ejJHclZ2SHpYVWRXWmd3Qk5XbzQrVHR1SnlReTEzUQ==',
+			ADMIN_PASS_HASH:
+				'JGFyZ29uMmlkJHY9MTkkbT02NTUzNix0PTMscD00JEI1NkdoMHVNVUQ2dnQ2Z0hOcGtWRUEkWEZRV3RqdFg2YkV6ejJHclZ2SHpYVWRXWmd3Qk5XbzQrVHR1SnlReTEzUQ==',
 			SESSION_SECRET: 'test-secret-key-for-e2e-testing',
 			PORT: '4173',
 			DATA_DIR: './data',

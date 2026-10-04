@@ -1,6 +1,12 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '$lib/components/ui/card';
+	import {
+		Card,
+		CardContent,
+		CardHeader,
+		CardTitle,
+		CardDescription
+	} from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
 	import { Label } from '$lib/components/ui/label';
 	import PageHeader from '$lib/components/admin/PageHeader.svelte';
@@ -72,9 +78,9 @@
 		<Button href="/admin/quizzes" variant="outline" disabled={isSubmitting}>Cancel</Button>
 		<Button type="submit" disabled={isSubmitting}>
 			{#if isSubmitting}
-				<Loader2 class="size-4 mr-2 animate-spin" />
+				<Loader2 class="mr-2 size-4 animate-spin" />
 			{:else}
-				<Upload class="size-4 mr-2" />
+				<Upload class="mr-2 size-4" />
 			{/if}
 			Import Quiz
 		</Button>

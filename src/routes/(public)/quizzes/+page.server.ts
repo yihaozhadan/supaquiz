@@ -2,7 +2,7 @@ import type { PageServerLoad } from './$types';
 import { getPublicQuizzesPaged } from '$lib/server/public-quizzes';
 import { error } from '@sveltejs/kit';
 
-const VALID_STATUSES = ['active', 'all'] as const;
+const VALID_STATUSES = ['active', 'all', 'expired'] as const;
 const VALID_SORTS = ['newest', 'oldest', 'most_popular', 'alphabetical'] as const;
 const PAGE_SIZE = 12;
 

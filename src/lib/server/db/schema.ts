@@ -19,14 +19,17 @@ export const quiz = sqliteTable('quiz', {
 	description: text('description').notNull(),
 	password: text('password'),
 	timeLimitSeconds: integer('time_limit_seconds'),
-	shuffleQuestions: integer('shuffle_questions', { mode: 'boolean' })
-		.notNull()
-		.default(false),
-	maxAttempts: integer('max_attempts').notNull().default(1),
-	maxParticipants: integer('max_participants').notNull(),
+	shuffleQuestions: integer('shuffle_questions', { mode: 'boolean' }).notNull().default(false),
+	maxAttempts: integer('max_attempts').default(1),
+	maxParticipants: integer('max_participants'),
 	allowBackNavigation: integer('allow_back_navigation', { mode: 'boolean' })
 		.notNull()
 		.default(true),
+	questionDisplayMode: text('question_display_mode', {
+		enum: ['one_at_a_time', 'all_on_one_page']
+	})
+		.notNull()
+		.default('one_at_a_time'),
 	revealAnswersAfter: text('reveal_answers_after', {
 		enum: ['immediate', 'never']
 	})
@@ -37,6 +40,9 @@ export const quiz = sqliteTable('quiz', {
 		.notNull()
 		.default('draft'),
 	isPublic: integer('is_public', { mode: 'boolean' }).notNull().default(true),
+	isVisibleAfterExpiry: integer('is_visible_after_expiry', { mode: 'boolean' })
+		.notNull()
+		.default(true),
 	activateAt: integer('activate_at', { mode: 'timestamp' }),
 	expireAt: integer('expire_at', { mode: 'timestamp' }),
 	createdAt: integer('created_at', { mode: 'timestamp' })
@@ -73,6 +79,7 @@ export const attempt = sqliteTable('attempt', {
 	quizId: text('quiz_id')
 		.notNull()
 		.references(() => quiz.id, { onDelete: 'cascade' }),
+	participantKey: text('participant_key').notNull(),
 	intakeFormData: text('intake_form_data', { mode: 'json' }).notNull(),
 	answers: text('answers', { mode: 'json' }).notNull(),
 	score: integer('score').notNull(),

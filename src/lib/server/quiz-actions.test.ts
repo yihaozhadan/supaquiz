@@ -31,6 +31,7 @@ vi.mock('./db', () => ({
 describe('Quiz Constraints', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		vi.mocked(db.query.question.findMany).mockResolvedValue([]);
 	});
 
 	describe('Max 5 Active Quizzes', () => {
@@ -88,10 +89,10 @@ describe('Quiz Constraints', () => {
 			expect(result.error).toBe('Maximum 5 active quizzes allowed');
 		});
 
-		it('should reject activation when max_participants is not set', async () => {
+		it('should allow activation when max_participants is not set (no limit)', async () => {
 			const mockQuiz = {
 				id: '123e4567-e89b-12d3-a456-426614174000',
-				maxParticipants: 0,
+				maxParticipants: null,
 				status: 'draft'
 			};
 
@@ -101,6 +102,13 @@ describe('Quiz Constraints', () => {
 					where: vi.fn().mockResolvedValue([{ count: 2 }])
 				})
 			} as any);
+			vi.mocked(db.update).mockReturnValue({
+				set: vi.fn().mockReturnValue({
+					where: vi.fn().mockReturnValue({
+						returning: vi.fn().mockResolvedValue([mockQuiz])
+					})
+				})
+			} as any);
 
 			const formData = new FormData();
 			formData.append('id', '123e4567-e89b-12d3-a456-426614174000');
@@ -108,8 +116,7 @@ describe('Quiz Constraints', () => {
 
 			const result = await toggleQuizStatus(formData);
 
-			expect(result.success).toBe(false);
-			expect(result.error).toBe('max_participants must be set before activating');
+			expect(result.success).toBe(true);
 		});
 	});
 

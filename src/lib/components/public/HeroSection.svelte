@@ -29,13 +29,16 @@
 			<h1 class="mt-6 text-4xl font-bold tracking-tight text-balance sm:text-5xl lg:text-6xl">
 				Run quizzes on your own terms
 			</h1>
-			<p class="mt-5 text-lg text-muted-foreground text-pretty sm:text-xl">
+			<p class="mt-5 text-lg text-pretty text-muted-foreground sm:text-xl">
 				SupaQuiz is a lightweight quiz platform you host yourself. Build quizzes with multiple
-				question types, collect participant responses, and auto-grade results — all without
-				sending data to a third party.
+				question types, collect participant responses, and auto-grade results — all without sending
+				data to a third party.
 			</p>
 			<div class="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-				<a href="/quizzes" class={buttonVariants({ size: 'lg', class: 'min-h-11 w-full sm:w-auto' })}>
+				<a
+					href="/quizzes"
+					class={buttonVariants({ size: 'lg', class: 'min-h-11 w-full sm:w-auto' })}
+				>
 					Browse Quizzes
 					<ArrowRight class="ml-2 h-4 w-4" />
 				</a>
@@ -44,7 +47,11 @@
 						href={githubUrl}
 						target="_blank"
 						rel="noopener noreferrer"
-						class={buttonVariants({ variant: 'outline', size: 'lg', class: 'min-h-11 w-full sm:w-auto' })}
+						class={buttonVariants({
+							variant: 'outline',
+							size: 'lg',
+							class: 'min-h-11 w-full sm:w-auto'
+						})}
 					>
 						<ExternalLink class="mr-2 h-4 w-4" />
 						View on GitHub

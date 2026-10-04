@@ -10,6 +10,103 @@ import {
 } from './validations';
 import { saveQuestionMedia, deleteQuestionMedia } from './storage';
 
+/**
+ * Normalize the correctAnswer form field into the shape expected by the
+ * grading logic: mcq_multi keeps the full array of option ids, while
+ * mcq_single/true_false/fitb store a single string value.
+ */
+function parseCorrectAnswer(type: unknown, raw: string): string | string[] {
+	if (type === 'mcq_multi') {
+		return JSON.parse(raw);
+	}
+	if (type === 'mcq_single') {
+		const parsed = JSON.parse(raw);
+		return Array.isArray(parsed) ? (parsed[0] ?? '') : parsed;
+	}
+	return raw;
+}
+
+type QuestionType = 'mcq_single' | 'mcq_multi' | 'true_false' | 'fitb';
+
+/**
+ * Tolerate old data where `correct_answer` was double-encoded as a JSON string.
+ * Returns the canonical shape: a string for single-value answers, an array for
+ * mcq_multi, and a string for true_false/fitb.
+ */
+export function normalizeCorrectAnswer(type: string, value: unknown): string | string[] {
+	if (value == null) return type === 'mcq_multi' ? [] : '';
+
+	let parsed = value;
+
+	// If the value is a string, it may be a JSON-encoded string/array/object.
+	// Only parse when it clearly looks like JSON; plain text answers (e.g. fitb
+	// or option ids) should be left as-is.
+	if (typeof parsed === 'string') {
+		const trimmed = parsed.trim();
+		if (
+			trimmed.startsWith('[') ||
+			trimmed.startsWith('{') ||
+			(trimmed.startsWith('"') && trimmed.endsWith('"'))
+		) {
+			try {
+				parsed = JSON.parse(trimmed);
+			} catch {
+				// Leave as-is.
+			}
+		}
+	}
+
+	if (type === ('mcq_multi' as QuestionType)) {
+		return Array.isArray(parsed) ? parsed.map(String) : [String(parsed)];
+	}
+	if (type === ('mcq_single' as QuestionType)) {
+		return Array.isArray(parsed) ? String(parsed[0] ?? '') : String(parsed);
+	}
+
+	// true_false and fitb are stored as strings.
+	return String(parsed);
+}
+
+/**
+ * Tolerate old data where `options` was stored as a JSON string, or where
+ * options were stored as plain strings.
+ */
+export function normalizeOptions(
+	raw: unknown
+): { id: string; text: string; isCorrect: boolean }[] | null {
+	if (raw == null) return null;
+
+	let list = raw;
+	if (typeof list === 'string') {
+		try {
+			list = JSON.parse(list);
+		} catch {
+			return null;
+		}
+	}
+
+	if (!Array.isArray(list)) return null;
+
+	return list.map((o: any) => {
+		if (typeof o === 'string') {
+			return { id: o, text: o, isCorrect: false };
+		}
+		return {
+			id: String(o.id || o.text || crypto.randomUUID()),
+			text: String(o.text ?? o.id ?? ''),
+			isCorrect: Boolean(o.isCorrect)
+		};
+	});
+}
+
+export function normalizeQuestion(q: typeof question.$inferSelect): typeof question.$inferSelect {
+	return {
+		...q,
+		correctAnswer: normalizeCorrectAnswer(q.type, q.correctAnswer),
+		options: normalizeOptions(q.options) as typeof question.$inferSelect.options
+	};
+}
+
 export async function getQuizzes() {
 	const quizzes = await db.query.quiz.findMany({
 		orderBy: [desc(quiz.createdAt)]
@@ -47,7 +144,7 @@ export async function getQuizById(id: string) {
 
 	return {
 		...quizData,
-		questions
+		questions: questions.map(normalizeQuestion)
 	};
 }
 
@@ -58,10 +155,22 @@ export async function createQuiz(formData: FormData) {
 	const processedData = {
 		...data,
 		timeLimitSeconds: data.timeLimitSeconds ? Number(data.timeLimitSeconds) : undefined,
-		maxAttempts: Number(data.maxAttempts),
-		maxParticipants: Number(data.maxParticipants),
+		maxAttempts:
+			data.maxAttempts === ''
+				? null
+				: data.maxAttempts !== undefined
+					? Number(data.maxAttempts)
+					: undefined,
+		maxParticipants: data.maxParticipants ? Number(data.maxParticipants) : null,
 		shuffleQuestions: data.shuffleQuestions === 'on',
 		allowBackNavigation: data.allowBackNavigation === 'on',
+		isVisibleAfterExpiry:
+			data.isVisibleAfterExpiry === 'on'
+				? true
+				: data.isVisibleAfterExpiry === undefined
+					? undefined
+					: false,
+		questionDisplayMode: data.questionDisplayMode || 'one_at_a_time',
 		intakeFormSchema: data.intakeFormSchema ? JSON.parse(data.intakeFormSchema as string) : []
 	};
 
@@ -74,13 +183,7 @@ export async function createQuiz(formData: FormData) {
 		return { success: false, error: 'Invalid data' };
 	}
 
-	const newQuiz = await db
-		.insert(quiz)
-		.values({
-			...parsed.data,
-			intakeFormSchema: JSON.stringify(parsed.data.intakeFormSchema)
-		})
-		.returning();
+	const newQuiz = await db.insert(quiz).values(parsed.data).returning();
 
 	return { success: true, quiz: newQuiz[0] };
 }
@@ -92,11 +195,26 @@ export async function updateQuiz(formData: FormData) {
 	const processedData = {
 		...data,
 		timeLimitSeconds: data.timeLimitSeconds ? Number(data.timeLimitSeconds) : undefined,
-		maxAttempts: data.maxAttempts ? Number(data.maxAttempts) : undefined,
-		maxParticipants: data.maxParticipants ? Number(data.maxParticipants) : undefined,
+		maxAttempts:
+			data.maxAttempts === '' ? null : data.maxAttempts ? Number(data.maxAttempts) : undefined,
+		maxParticipants:
+			data.maxParticipants === ''
+				? null
+				: data.maxParticipants
+					? Number(data.maxParticipants)
+					: undefined,
 		shuffleQuestions: data.shuffleQuestions === 'on',
 		allowBackNavigation: data.allowBackNavigation === 'on',
-		intakeFormSchema: data.intakeFormSchema ? JSON.parse(data.intakeFormSchema as string) : undefined,
+		isVisibleAfterExpiry:
+			data.isVisibleAfterExpiry === 'on'
+				? true
+				: data.isVisibleAfterExpiry === undefined
+					? undefined
+					: false,
+		questionDisplayMode: data.questionDisplayMode || undefined,
+		intakeFormSchema: data.intakeFormSchema
+			? JSON.parse(data.intakeFormSchema as string)
+			: undefined,
 		activateAt: data.activateAt ? new Date(data.activateAt as string) : undefined,
 		expireAt: data.expireAt ? new Date(data.expireAt as string) : undefined
 	};
@@ -113,7 +231,6 @@ export async function updateQuiz(formData: FormData) {
 		.update(quiz)
 		.set({
 			...updateData,
-			intakeFormSchema: JSON.stringify(updateData.intakeFormSchema || []),
 			updatedAt: new Date()
 		})
 		.where(eq(quiz.id, id))
@@ -128,7 +245,7 @@ export async function deleteQuiz(id: string) {
 }
 
 export async function duplicateQuiz(id: string) {
-	const originalQuiz = await getQuizById(id) as {
+	const originalQuiz = (await getQuizById(id)) as {
 		questions: any[];
 		[key: string]: any;
 	} | null;
@@ -147,8 +264,11 @@ export async function duplicateQuiz(id: string) {
 			maxAttempts: originalQuiz.maxAttempts,
 			maxParticipants: originalQuiz.maxParticipants,
 			allowBackNavigation: originalQuiz.allowBackNavigation,
+			questionDisplayMode: originalQuiz.questionDisplayMode,
 			revealAnswersAfter: originalQuiz.revealAnswersAfter,
-			intakeFormSchema: JSON.stringify(originalQuiz.intakeFormSchema),
+			isPublic: originalQuiz.isPublic,
+			isVisibleAfterExpiry: originalQuiz.isVisibleAfterExpiry,
+			intakeFormSchema: originalQuiz.intakeFormSchema,
 			status: 'draft',
 			activateAt: originalQuiz.activateAt,
 			expireAt: originalQuiz.expireAt
@@ -162,8 +282,8 @@ export async function duplicateQuiz(id: string) {
 			type: q.type,
 			text: q.text,
 			mediaUrl: q.mediaUrl,
-			options: q.options ? JSON.stringify(q.options) : null,
-			correctAnswer: JSON.stringify(q.correctAnswer),
+			options: q.options ?? null,
+			correctAnswer: q.correctAnswer,
 			explanation: q.explanation,
 			codeSnippet: q.codeSnippet,
 			orderIndex: q.orderIndex
@@ -201,11 +321,6 @@ export async function toggleQuizStatus(formData: FormData) {
 		if (activeCount[0].count >= 5) {
 			return { success: false, error: 'Maximum 5 active quizzes allowed' };
 		}
-
-		// Check max_participants is set
-		if (!currentQuiz.maxParticipants || currentQuiz.maxParticipants <= 0) {
-			return { success: false, error: 'max_participants must be set before activating' };
-		}
 	}
 
 	const updatedQuiz = await db
@@ -225,17 +340,17 @@ export async function createQuestion(formData: FormData) {
 	const processedData: Record<string, unknown> = {
 		...data,
 		orderIndex: Number(data.orderIndex),
+		mediaUrl:
+			typeof data.mediaUrl === 'string' && data.mediaUrl.trim() !== ''
+				? data.mediaUrl.trim()
+				: undefined,
 		options: data.options ? JSON.parse(data.options as string) : undefined,
 		codeSnippet: data.codeSnippet ? (data.codeSnippet as string) : undefined
 	};
 
 	// Handle correctAnswer based on question type
 	if (data.correctAnswer) {
-		if (data.type === 'mcq_single' || data.type === 'mcq_multi') {
-			processedData.correctAnswer = JSON.parse(data.correctAnswer as string);
-		} else {
-			processedData.correctAnswer = data.correctAnswer as string;
-		}
+		processedData.correctAnswer = parseCorrectAnswer(data.type, data.correctAnswer as string);
 	}
 
 	const parsed = questionCreateSchema.safeParse(processedData);
@@ -257,8 +372,7 @@ export async function createQuestion(formData: FormData) {
 		.insert(question)
 		.values({
 			...parsed.data,
-			options: parsed.data.options ? JSON.stringify(parsed.data.options) : null,
-			correctAnswer: JSON.stringify(parsed.data.correctAnswer)
+			options: parsed.data.options ?? null
 		})
 		.returning();
 
@@ -292,17 +406,17 @@ export async function updateQuestion(formData: FormData) {
 	const processedData: Record<string, unknown> = {
 		...data,
 		orderIndex: data.orderIndex ? Number(data.orderIndex) : undefined,
+		mediaUrl:
+			typeof data.mediaUrl === 'string' && data.mediaUrl.trim() !== ''
+				? data.mediaUrl.trim()
+				: undefined,
 		options: data.options ? JSON.parse(data.options as string) : undefined,
 		codeSnippet: data.codeSnippet ? (data.codeSnippet as string) : undefined
 	};
 
 	// Handle correctAnswer based on question type
 	if (data.correctAnswer) {
-		if (data.type === 'mcq_single' || data.type === 'mcq_multi') {
-			processedData.correctAnswer = JSON.parse(data.correctAnswer as string);
-		} else {
-			processedData.correctAnswer = data.correctAnswer as string;
-		}
+		processedData.correctAnswer = parseCorrectAnswer(data.type, data.correctAnswer as string);
 	}
 
 	const parsed = questionUpdateSchema.safeParse(processedData);
@@ -313,20 +427,26 @@ export async function updateQuestion(formData: FormData) {
 
 	const { id, quizId, ...updateData } = parsed.data;
 
+	// Capture the previous mediaUrl before the update so a replaced or removed
+	// uploaded file can be deleted from disk.
+	const previousQuestion = await db.query.question.findFirst({
+		where: eq(question.id, id)
+	});
+	const previousMediaUrl = previousQuestion?.mediaUrl ?? null;
+
 	const updatedQuestion = await db
 		.update(question)
 		.set({
 			...updateData,
-			options: updateData.options ? JSON.stringify(updateData.options) : null,
-			correctAnswer: JSON.stringify(updateData.correctAnswer)
+			options: updateData.options ?? null
 		})
 		.where(eq(question.id, id))
 		.returning();
 
 	// Handle media replacement / removal
 	if (removeMedia) {
-		if (updatedQuestion[0].mediaUrl) {
-			await deleteQuestionMedia(updatedQuestion[0].mediaUrl);
+		if (previousMediaUrl) {
+			await deleteQuestionMedia(previousMediaUrl);
 		}
 		const cleared = await db
 			.update(question)
@@ -338,8 +458,8 @@ export async function updateQuestion(formData: FormData) {
 
 	if (mediaFile && mediaFile.size > 0 && mediaFile.name) {
 		try {
-			if (updatedQuestion[0].mediaUrl) {
-				await deleteQuestionMedia(updatedQuestion[0].mediaUrl);
+			if (previousMediaUrl) {
+				await deleteQuestionMedia(previousMediaUrl);
 			}
 			const targetQuizId = quizId || updatedQuestion[0].quizId;
 			const mediaUrl = await saveQuestionMedia(targetQuizId, mediaFile);
@@ -355,6 +475,17 @@ export async function updateQuestion(formData: FormData) {
 				error: err instanceof Error ? err.message : 'Failed to save media file'
 			};
 		}
+	}
+
+	// If mediaUrl was changed to a different value (e.g. switched to an
+	// externally hosted URL), delete the previously uploaded file so it does
+	// not linger on disk. deleteQuestionMedia ignores non-uploads paths.
+	if (
+		updateData.mediaUrl !== undefined &&
+		updateData.mediaUrl !== previousMediaUrl &&
+		previousMediaUrl
+	) {
+		await deleteQuestionMedia(previousMediaUrl);
 	}
 
 	return { success: true, question: updatedQuestion[0] };

@@ -12,12 +12,14 @@ export interface QuizExportData {
 		password: string | null;
 		timeLimitSeconds: number | null;
 		shuffleQuestions: boolean;
-		maxAttempts: number;
-		maxParticipants: number;
+		maxAttempts: number | null;
+		maxParticipants: number | null;
 		allowBackNavigation: boolean;
+		questionDisplayMode: 'one_at_a_time' | 'all_on_one_page';
 		revealAnswersAfter: 'immediate' | 'never';
 		intakeFormSchema: unknown;
 		isPublic: boolean;
+		isVisibleAfterExpiry: boolean;
 	};
 	questions: Array<{
 		type: string;
@@ -52,9 +54,11 @@ export async function exportQuiz(id: string): Promise<QuizExportData | null> {
 			maxAttempts: quizData.maxAttempts,
 			maxParticipants: quizData.maxParticipants,
 			allowBackNavigation: quizData.allowBackNavigation,
+			questionDisplayMode: quizData.questionDisplayMode,
 			revealAnswersAfter: quizData.revealAnswersAfter,
 			intakeFormSchema: quizData.intakeFormSchema,
-			isPublic: quizData.isPublic
+			isPublic: quizData.isPublic,
+			isVisibleAfterExpiry: quizData.isVisibleAfterExpiry
 		},
 		questions: quizData.questions.map((q) => ({
 			type: q.type,
@@ -96,7 +100,6 @@ export async function importQuiz(jsonText: string) {
 		.insert(quiz)
 		.values({
 			...quizFields,
-			intakeFormSchema: JSON.stringify(quizFields.intakeFormSchema),
 			status: 'draft'
 		})
 		.returning();
@@ -108,9 +111,14 @@ export async function importQuiz(jsonText: string) {
 		for (const q of questions) {
 			let mediaUrl: string | null = null;
 			if (q.mediaUrl) {
-				mediaUrl = await copyQuestionMedia(q.mediaUrl, newQuiz[0].id);
-				if (!mediaUrl) {
-					warnings.push(`Media file missing for question: "${q.text.slice(0, 60)}"`);
+				if (/^https?:\/\//i.test(q.mediaUrl)) {
+					// Externally hosted media needs no local copy.
+					mediaUrl = q.mediaUrl;
+				} else {
+					mediaUrl = await copyQuestionMedia(q.mediaUrl, newQuiz[0].id);
+					if (!mediaUrl) {
+						warnings.push(`Media file missing for question: "${q.text.slice(0, 60)}"`);
+					}
 				}
 			}
 			questionValues.push({
@@ -118,8 +126,8 @@ export async function importQuiz(jsonText: string) {
 				type: q.type,
 				text: q.text,
 				mediaUrl,
-				options: q.options ? JSON.stringify(q.options) : null,
-				correctAnswer: JSON.stringify(q.correctAnswer),
+				options: q.options ?? null,
+				correctAnswer: q.correctAnswer,
 				explanation: q.explanation ?? null,
 				codeSnippet: q.codeSnippet ?? null,
 				orderIndex: q.orderIndex

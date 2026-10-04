@@ -12,7 +12,7 @@
 	} = $props();
 </script>
 
-<div class="flex items-center justify-between mb-6">
+<div class="mb-6 flex items-center justify-between">
 	<div>
 		<h1 class="text-2xl font-bold text-foreground">{title}</h1>
 		{#if description}

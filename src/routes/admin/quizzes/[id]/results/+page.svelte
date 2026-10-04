@@ -194,13 +194,19 @@
 
 	function exportCsv() {
 		const csv = attemptsToCsv(filteredAttempts);
-		const slug = data.quiz.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+		const slug = data.quiz.title
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, '-')
+			.replace(/^-|-$/g, '');
 		downloadFile(csv, `results-${slug}.csv`, 'text/csv;charset=utf-8;');
 	}
 
 	function exportJson() {
 		const json = attemptsToJson(filteredAttempts);
-		const slug = data.quiz.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+		const slug = data.quiz.title
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, '-')
+			.replace(/^-|-$/g, '');
 		downloadFile(json, `results-${slug}.json`, 'application/json');
 	}
 
@@ -212,19 +218,19 @@
 
 <PageHeader title="Results" description="{data.quiz.title} — participant attempts and scores">
 	<Button href="/admin/quizzes/{data.quiz.id}/edit" variant="outline">
-		<ArrowLeft class="size-4 mr-2" />
+		<ArrowLeft class="mr-2 size-4" />
 		Back to Quiz
 	</Button>
 </PageHeader>
 
 <!-- Metrics bar (6.6.3) -->
-<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+<div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
 	{#each metrics as metric}
 		<Card class="transition-shadow duration-200 hover:shadow-md">
 			<CardContent class="p-4">
 				<div class="flex items-center justify-between">
 					<div>
-						<p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+						<p class="text-xs font-medium tracking-wide text-muted-foreground uppercase">
 							{metric.label}
 						</p>
 						<p class="mt-1 text-2xl font-bold text-foreground">{metric.value}</p>
@@ -239,9 +245,9 @@
 </div>
 
 <!-- Toolbar (6.6.2) + Export (6.6.4) -->
-<div class="flex flex-wrap items-center gap-3 mb-6">
-	<div class="relative flex-1 min-w-[200px] max-w-sm">
-		<Search class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+<div class="mb-6 flex flex-wrap items-center gap-3">
+	<div class="relative max-w-sm min-w-[200px] flex-1">
+		<Search class="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
 		<Input
 			type="text"
 			placeholder="Search participants..."
@@ -256,7 +262,7 @@
 	<div class="ml-auto flex items-center gap-2">
 		{#if selectedIds.size > 0}
 			<Button variant="destructive" size="sm" onclick={handleBulkDeleteClick}>
-				<Trash2 class="size-4 mr-2" />
+				<Trash2 class="mr-2 size-4" />
 				Delete {selectedIds.size} selected
 			</Button>
 		{/if}
@@ -265,17 +271,17 @@
 		<DropdownMenu.DropdownMenu>
 			<DropdownMenu.Trigger>
 				<Button variant="outline" size="sm" class="cursor-pointer">
-					<Download class="size-4 mr-2" />
+					<Download class="mr-2 size-4" />
 					Export
 				</Button>
 			</DropdownMenu.Trigger>
 			<DropdownMenu.Content align="end">
 				<DropdownMenu.Item onSelect={exportCsv} disabled={filteredAttempts.length === 0}>
-					<FileText class="size-4 mr-2" />
+					<FileText class="mr-2 size-4" />
 					Export as CSV
 				</DropdownMenu.Item>
 				<DropdownMenu.Item onSelect={exportJson} disabled={filteredAttempts.length === 0}>
-					<FileJson class="size-4 mr-2" />
+					<FileJson class="mr-2 size-4" />
 					Export as JSON
 				</DropdownMenu.Item>
 			</DropdownMenu.Content>
@@ -312,12 +318,12 @@
 			{:else if column.id === 'participantName'}
 				<button
 					type="button"
-					class="text-left cursor-pointer hover:text-primary transition-colors"
+					class="cursor-pointer text-left transition-colors hover:text-primary"
 					onclick={() => openDetail(attempt)}
 				>
 					<div class="font-medium text-foreground">{attempt.participantName}</div>
 					{#if attempt.participantEmail}
-						<div class="text-muted-foreground text-xs truncate max-w-xs">
+						<div class="max-w-xs truncate text-xs text-muted-foreground">
 							{attempt.participantEmail}
 						</div>
 					{/if}
@@ -353,8 +359,8 @@
 		<AlertDialog.Header>
 			<AlertDialog.Title>Delete Selected Attempts</AlertDialog.Title>
 			<AlertDialog.Description>
-				Are you sure you want to delete {selectedIds.size} selected attempt(s)?
-				This action cannot be undone.
+				Are you sure you want to delete {selectedIds.size} selected attempt(s)? This action cannot be
+				undone.
 			</AlertDialog.Description>
 		</AlertDialog.Header>
 		<AlertDialog.Footer>
@@ -383,4 +389,8 @@
 </AlertDialog.Root>
 
 <!-- Attempt detail sheet (6.6.5) -->
-<AttemptDetailSheet bind:open={detailOpen} attempt={activeAttempt ? buildDetail(activeAttempt) : null} {revealAnswers} />
+<AttemptDetailSheet
+	bind:open={detailOpen}
+	attempt={activeAttempt ? buildDetail(activeAttempt) : null}
+	{revealAnswers}
+/>

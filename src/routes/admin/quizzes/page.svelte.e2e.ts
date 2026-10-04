@@ -4,7 +4,7 @@ async function login(page: any) {
 	await page.goto('/admin/login');
 	await page.fill('input[name="username"]', 'admin');
 	await page.fill('input[name="password"]', 'password123');
-	await page.locator('form').evaluate((form) => form.submit());
+	await page.locator('form').evaluate((form: HTMLFormElement) => form.submit());
 	await page.waitForLoadState('networkidle');
 	await expect(page).toHaveURL('/admin');
 	await expect(page.locator('a[href="/admin/logout"]')).toBeVisible();
@@ -31,7 +31,7 @@ test.describe('Quiz CRUD Operations', () => {
 		await page.fill('input[name="maxParticipants"]', '100');
 		await page.fill('input[name="maxAttempts"]', '1');
 
-		await page.locator('form.space-y-6').evaluate((form) => form.submit());
+		await page.locator('form.space-y-6').evaluate((form: HTMLFormElement) => form.submit());
 		await page.waitForLoadState('networkidle');
 
 		await expect(page).toHaveURL(/\/admin\/quizzes\/.*\/edit/, { timeout: 10000 });
@@ -44,7 +44,7 @@ test.describe('Quiz CRUD Operations', () => {
 		await page.fill('textarea[name="description"]', 'Description');
 		await page.fill('input[name="maxParticipants"]', '50');
 		await page.fill('input[name="maxAttempts"]', '1');
-		await page.locator('form.space-y-6').evaluate((form) => form.submit());
+		await page.locator('form.space-y-6').evaluate((form: HTMLFormElement) => form.submit());
 		await page.waitForLoadState('networkidle');
 		await expect(page).toHaveURL(/\/admin\/quizzes\/.*\/edit/);
 
@@ -53,11 +53,15 @@ test.describe('Quiz CRUD Operations', () => {
 		// Switch to Settings tab to access maxAttempts
 		await page.click('[data-slot="tabs-trigger"]:has-text("Settings")');
 		await page.fill('input[name="maxAttempts"]', '3');
-		await page.locator('form[action="?/update"]').evaluate((form) => form.submit());
+		await page
+			.locator('form[action="?/update"]')
+			.evaluate((form: HTMLFormElement) => form.submit());
 		await page.waitForURL(/\/edit\?\/update/);
 		await page.waitForLoadState('networkidle');
 
-		await expect(page.locator('[role="alert"]')).toContainText('Quiz updated successfully', { timeout: 10000 });
+		await expect(page.locator('[role="alert"]')).toContainText('Quiz updated successfully', {
+			timeout: 10000
+		});
 	});
 
 	test('should duplicate a quiz', async ({ page }) => {
@@ -66,7 +70,7 @@ test.describe('Quiz CRUD Operations', () => {
 		await page.fill('textarea[name="description"]', 'Original description');
 		await page.fill('input[name="maxParticipants"]', '100');
 		await page.fill('input[name="maxAttempts"]', '1');
-		await page.locator('form.space-y-6').evaluate((form) => form.submit());
+		await page.locator('form.space-y-6').evaluate((form: HTMLFormElement) => form.submit());
 		await page.waitForLoadState('networkidle');
 		await expect(page).toHaveURL(/\/admin\/quizzes\/.*\/edit/);
 
@@ -78,7 +82,9 @@ test.describe('Quiz CRUD Operations', () => {
 		await page.waitForURL(/\/quizzes\?\/duplicate/);
 		await page.waitForLoadState('networkidle');
 
-		await expect(page.locator('[role="alert"]')).toContainText('Quiz duplicated successfully', { timeout: 10000 });
+		await expect(page.locator('[role="alert"]')).toContainText('Quiz duplicated successfully', {
+			timeout: 10000
+		});
 	});
 
 	test('should delete a quiz', async ({ page }) => {
@@ -87,7 +93,7 @@ test.describe('Quiz CRUD Operations', () => {
 		await page.fill('textarea[name="description"]', 'Will be deleted');
 		await page.fill('input[name="maxParticipants"]', '100');
 		await page.fill('input[name="maxAttempts"]', '1');
-		await page.locator('form.space-y-6').evaluate((form) => form.submit());
+		await page.locator('form.space-y-6').evaluate((form: HTMLFormElement) => form.submit());
 		await page.waitForLoadState('networkidle');
 		await expect(page).toHaveURL(/\/admin\/quizzes\/.*\/edit/);
 
@@ -100,7 +106,9 @@ test.describe('Quiz CRUD Operations', () => {
 		await page.click('[data-slot="alert-dialog-action"] button[type="submit"]');
 		await page.waitForLoadState('networkidle');
 
-		await expect(page.locator('[role="alert"]')).toContainText('Quiz deleted successfully', { timeout: 10000 });
+		await expect(page.locator('[role="alert"]')).toContainText('Quiz deleted successfully', {
+			timeout: 10000
+		});
 	});
 
 	test('should enforce max 5 active quizzes constraint', async ({ page }) => {
@@ -109,7 +117,9 @@ test.describe('Quiz CRUD Operations', () => {
 		// Open the dropdown menu for the first quiz
 		await page.locator('[data-slot="dropdown-menu-trigger"]').first().click();
 
-		const activateButtons = page.locator('[data-slot="dropdown-menu"] button:has-text("Activate")');
+		const activateButtons = page.locator(
+			'[data-slot="dropdown-menu-content"] button:has-text("Activate")'
+		);
 		const count = await activateButtons.count();
 
 		if (count > 0) {
@@ -136,7 +146,7 @@ test.describe('Question Editor', () => {
 		await page.fill('textarea[name="description"]', 'Test quiz');
 		await page.fill('input[name="maxParticipants"]', '100');
 		await page.fill('input[name="maxAttempts"]', '1');
-		await page.locator('form.space-y-6').evaluate((form) => form.submit());
+		await page.locator('form.space-y-6').evaluate((form: HTMLFormElement) => form.submit());
 		await page.waitForLoadState('networkidle');
 		await expect(page).toHaveURL(/\/admin\/quizzes\/.*\/edit/);
 
@@ -214,6 +224,8 @@ test.describe('Question Editor', () => {
 		await page.waitForLoadState('networkidle');
 		await expect(page.locator('[data-slot="sheet-content"]')).toBeHidden({ timeout: 10000 });
 
-		await expect(page.locator('text=The capital of France is _____')).toBeVisible({ timeout: 10000 });
+		await expect(page.locator('text=The capital of France is _____')).toBeVisible({
+			timeout: 10000
+		});
 	});
 });

@@ -33,10 +33,7 @@ export async function ensureUploadDir() {
  * The quizId grouping keeps related files together without deep UUID nesting.
  * The stored mediaUrl is the path relative to DATA_DIR (with leading slash).
  */
-export async function saveQuestionMedia(
-	quizId: string,
-	file: File
-): Promise<string> {
+export async function saveQuestionMedia(quizId: string, file: File): Promise<string> {
 	await ensureUploadDir();
 
 	// Validate file size
@@ -75,10 +72,7 @@ export async function deleteQuestionMedia(mediaUrl: string): Promise<void> {
 
 	// Safety: ensure the path is inside UPLOADS_DIR
 	const normalizedUploads = join(UPLOADS_DIR);
-	if (
-		absolutePath !== normalizedUploads &&
-		!absolutePath.startsWith(normalizedUploads + sep)
-	) {
+	if (absolutePath !== normalizedUploads && !absolutePath.startsWith(normalizedUploads + sep)) {
 		console.warn(`Invalid mediaUrl path outside UPLOADS_DIR: ${mediaUrl}`);
 		return;
 	}

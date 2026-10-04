@@ -23,9 +23,7 @@ describe('results-format', () => {
 			const csv = attemptsToCsv([makeAttempt(), makeAttempt({ id: 'att-2' })]);
 			const lines = csv.split('\n');
 			expect(lines).toHaveLength(3);
-			expect(lines[0]).toBe(
-				'Participant,Email,Score,Total,Percentage,Time (s),Submitted At'
-			);
+			expect(lines[0]).toBe('Participant,Email,Score,Total,Percentage,Time (s),Submitted At');
 		});
 
 		it('computes percentage rounded to one decimal', () => {

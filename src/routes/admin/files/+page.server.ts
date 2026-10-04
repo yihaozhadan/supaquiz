@@ -18,7 +18,7 @@ export const load: PageServerLoad = async () => {
 			quizId: f.quizId,
 			questionId: f.questionId,
 			orphaned: f.orphaned,
-			quizTitle: f.quizId ? quizTitleMap.get(f.quizId) ?? null : null
+			quizTitle: f.quizId ? (quizTitleMap.get(f.quizId) ?? null) : null
 		})),
 		quizzes
 	};

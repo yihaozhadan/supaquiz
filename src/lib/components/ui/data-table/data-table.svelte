@@ -89,14 +89,14 @@
 
 <div class="space-y-4">
 	<!-- Desktop: table view -->
-	<div class="hidden sm:block rounded-lg border border-border overflow-hidden">
+	<div class="hidden overflow-hidden rounded-lg border border-border sm:block">
 		<table class="min-w-full divide-y divide-border">
 			<thead class="bg-muted">
 				<tr>
 					{#each columns as column}
 						<th
 							class={cn(
-								'px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider',
+								'px-4 py-3 text-left text-xs font-medium tracking-wider text-muted-foreground uppercase',
 								column.sortable && 'cursor-pointer select-none hover:text-foreground',
 								column.headerClass
 							)}
@@ -104,7 +104,9 @@
 							role={column.sortable ? 'button' : undefined}
 							tabindex={column.sortable ? 0 : undefined}
 							aria-sort={sortColumn === column.id
-								? (sortDirection === 'asc' ? 'ascending' : 'descending')
+								? sortDirection === 'asc'
+									? 'ascending'
+									: 'descending'
 								: undefined}
 							onkeydown={column.sortable
 								? (e) => {
@@ -118,16 +120,20 @@
 							<div class="flex items-center gap-2">
 								{column.header}
 								{#if column.sortable}
-									<ArrowUpDown class="size-3.5 {sortColumn === column.id ? 'text-foreground' : 'text-muted-foreground/50'}" />
+									<ArrowUpDown
+										class="size-3.5 {sortColumn === column.id
+											? 'text-foreground'
+											: 'text-muted-foreground/50'}"
+									/>
 								{/if}
 							</div>
 						</th>
 					{/each}
 				</tr>
 			</thead>
-			<tbody class="bg-card divide-y divide-border">
+			<tbody class="divide-y divide-border bg-card">
 				{#each paginatedData as row, i (i)}
-					<tr class="hover:bg-muted/50 transition-colors">
+					<tr class="transition-colors hover:bg-muted/50">
 						{#each columns as column}
 							<td class={cn('px-4 py-3 text-sm', column.class)}>
 								{@render cell({ row, column })}
@@ -147,37 +153,35 @@
 	</div>
 
 	<!-- Mobile: card list view -->
-	<div class="sm:hidden space-y-3">
+	<div class="space-y-3 sm:hidden">
 		{#each paginatedData as row, i (i)}
-			<div class="rounded-lg border border-border bg-card p-4 space-y-2">
+			<div class="space-y-2 rounded-lg border border-border bg-card p-4">
 				{#each displayColumns as column}
 					<div class="flex items-start justify-between gap-2">
-						<span class="text-xs font-medium text-muted-foreground shrink-0">{column.header}</span>
-						<span class="text-sm text-foreground text-right min-w-0 flex-1">
+						<span class="shrink-0 text-xs font-medium text-muted-foreground">{column.header}</span>
+						<span class="min-w-0 flex-1 text-right text-sm text-foreground">
 							{@render cell({ row, column })}
 						</span>
 					</div>
 				{/each}
 				{#if actionsColumn}
-					<div class="flex justify-end pt-2 border-t border-border">
+					<div class="flex justify-end border-t border-border pt-2">
 						{@render cell({ row, column: actionsColumn })}
 					</div>
 				{/if}
 			</div>
 		{/each}
 		{#if paginatedData.length === 0}
-			<div class="py-8 text-center text-muted-foreground">
-				No data available.
-			</div>
+			<div class="py-8 text-center text-muted-foreground">No data available.</div>
 		{/if}
 	</div>
 
 	<!-- Pagination -->
-	<div class="flex flex-col sm:flex-row items-center gap-3 sm:gap-0 sm:justify-between">
+	<div class="flex flex-col items-center gap-3 sm:flex-row sm:justify-between sm:gap-0">
 		<div class="flex items-center gap-2 text-sm text-muted-foreground">
 			<span>Show</span>
 			<select
-				class="h-8 rounded-md border border-border bg-background px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				class="h-8 rounded-md border border-border bg-background px-2 text-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
 				value={pageSize}
 				onchange={handlePageSizeChange}
 				aria-label="Entries per page"

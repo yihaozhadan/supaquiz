@@ -12,10 +12,7 @@ export const GET: RequestHandler = async ({ params }) => {
 	// Build the absolute path and verify it stays within UPLOADS_DIR
 	const target = join(UPLOADS_DIR, params.path);
 	const normalizedTarget = join(target); // Normalize to resolve .. and .
-	if (
-		normalizedTarget !== UPLOADS_DIR &&
-		!normalizedTarget.startsWith(UPLOADS_DIR + sep)
-	) {
+	if (normalizedTarget !== UPLOADS_DIR && !normalizedTarget.startsWith(UPLOADS_DIR + sep)) {
 		throw error(404, 'Not found');
 	}
 

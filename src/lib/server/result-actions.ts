@@ -1,11 +1,7 @@
 import { and, avg, eq, inArray, max, min, count, desc } from 'drizzle-orm';
 import { db } from './db';
 import { attempt } from './db/schema';
-import {
-	attemptsToCsv,
-	attemptsToJson,
-	type AttemptSummary
-} from '$lib/results-format';
+import { attemptsToCsv, attemptsToJson, type AttemptSummary } from '$lib/results-format';
 
 export type { AttemptSummary };
 export { attemptsToCsv, attemptsToJson };
@@ -22,9 +18,7 @@ export interface AttemptMetrics {
  * The intake form data is stored as a JSON array of { field, value } entries,
  * or as a plain object keyed by field name. Both shapes are tolerated.
  */
-function parseIntake(
-	intakeFormData: unknown
-): { name: string; email: string; raw: unknown } {
+function parseIntake(intakeFormData: unknown): { name: string; email: string; raw: unknown } {
 	if (intakeFormData == null) {
 		return { name: 'Anonymous', email: '', raw: null };
 	}

@@ -5,6 +5,7 @@ A lightweight, self-hostable open-source quiz platform. Create, publish, and tak
 ## Features
 
 ### Quiz Builder
+
 - Create quizzes with multiple question types: Multiple Choice (single/multiple answers), True/False, Fill-in-the-Blank
 - Optional password protection per quiz
 - Custom participant intake forms
@@ -15,6 +16,7 @@ A lightweight, self-hostable open-source quiz platform. Create, publish, and tak
 - Media support (images, audio, video, code snippets)
 
 ### Admin Dashboard
+
 - Manage all quizzes in one place
 - View quiz status (draft/active/expired)
 - Simple result metrics (total attempts, average/high/low scores)
@@ -22,6 +24,7 @@ A lightweight, self-hostable open-source quiz platform. Create, publish, and tak
 - File management for uploaded media
 
 ### Quiz Taking
+
 - Auto-save answers every 30 seconds
 - Auto-submit when time limit expires
 - Instant scoring and optional answer reveal
@@ -29,15 +32,15 @@ A lightweight, self-hostable open-source quiz platform. Create, publish, and tak
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| Framework | SvelteKit |
-| Language | TypeScript |
-| Styling | TailwindCSS 4 |
-| Database | SQLite (WAL mode) |
-| ORM | Drizzle ORM |
-| Runtime | Bun |
-| Testing | Playwright + Vitest |
+| Layer     | Technology          |
+| --------- | ------------------- |
+| Framework | SvelteKit           |
+| Language  | TypeScript          |
+| Styling   | TailwindCSS 4       |
+| Database  | SQLite (WAL mode)   |
+| ORM       | Drizzle ORM         |
+| Runtime   | Bun                 |
+| Testing   | Playwright + Vitest |
 
 ## Getting Started
 

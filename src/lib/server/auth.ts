@@ -8,6 +8,8 @@ import type { Cookies } from '@sveltejs/kit';
 const SESSION_COOKIE_NAME = 'admin_session';
 const SESSION_EXPIRY_HOURS = 24;
 
+const cookieSecure = env.COOKIE_SECURE === 'true';
+
 function getSecretKey() {
 	const secret = env.SESSION_SECRET;
 	if (!secret) throw new Error('SESSION_SECRET is not set');
@@ -25,7 +27,7 @@ export async function createSession(username: string, cookies: Cookies) {
 	cookies.set(SESSION_COOKIE_NAME, token, {
 		httpOnly: true,
 		path: '/',
-		secure: false, // Always false for local development and testing
+		secure: cookieSecure,
 		sameSite: 'lax',
 		maxAge: SESSION_EXPIRY_HOURS * 60 * 60
 	});
