@@ -8,7 +8,7 @@
 	import * as Select from '$lib/components/ui/select';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Label } from '$lib/components/ui/label';
-	import { Plus, Trash2, Upload, FileImage, X, Loader2, Code } from 'lucide-svelte';
+	import { Plus, Trash2, Upload, FileImage, X, Loader2, Code, Link } from 'lucide-svelte';
 
 	type QuestionType = 'mcq_single' | 'mcq_multi' | 'true_false' | 'fitb';
 
@@ -213,6 +213,35 @@
 		imageLoadError = false;
 	}
 
+	function handleMediaUrlChange(e: Event) {
+		const input = e.currentTarget as HTMLInputElement;
+		const value = input.value.trim();
+		mediaError = null;
+		imageLoadError = false;
+
+		if (!value) {
+			input.value = '';
+			mediaUrl = null;
+			mediaFileName = null;
+			if (question?.mediaUrl) removeMedia = true;
+			return;
+		}
+
+		if (!/^https?:\/\//i.test(value) && !value.startsWith('/')) {
+			mediaError = 'Enter a valid http(s) URL';
+			return;
+		}
+
+		input.value = value;
+		mediaUrl = value;
+		mediaFileName = value.split(/[?#]/)[0].split('/').pop() || value;
+		mediaFile = null;
+		removeMedia = false;
+		if (fileInput) {
+			fileInput.value = '';
+		}
+	}
+
 	function handleFileInput(e: Event) {
 		const input = e.currentTarget as HTMLInputElement;
 		handleFileSelect(input.files?.[0] ?? null);
@@ -251,7 +280,9 @@
 
 	const mediaIsImage = $derived(
 		(mediaFile && mediaFile.type.startsWith('image/')) ||
-			(mediaUrl && !mediaFile && /\.(jpg|jpeg|png|gif|webp)$/i.test(mediaUrl))
+			(mediaUrl &&
+				!mediaFile &&
+				/\.(jpg|jpeg|png|gif|webp)$/i.test(mediaUrl.split(/[?#]/)[0]))
 	);
 
 	const correctAnswerValue = $derived.by(() => {
@@ -593,6 +624,27 @@
 							<span class="font-medium">Click to upload</span> or drag and drop
 						</p>
 						<p class="text-xs text-muted-foreground">Images, audio, or video (max 50MB)</p>
+					</div>
+				{/if}
+				{#if !mediaFile}
+					<div class="space-y-1.5">
+						<div class="relative">
+							<Link
+								class="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+							/>
+							<Input
+								type="url"
+								name="mediaUrl"
+								value={mediaUrl ?? ''}
+								onchange={handleMediaUrlChange}
+								placeholder="https://example.com/image.png"
+								class="pl-9"
+								aria-label="Media URL"
+							/>
+						</div>
+						<p class="text-xs text-muted-foreground">
+							Or paste a URL to use media hosted on another server.
+						</p>
 					</div>
 				{/if}
 				{#if mediaError}

@@ -39,7 +39,13 @@ export const questionCreateSchema = z.object({
 	quizId: z.uuid(),
 	type: z.enum(['mcq_single', 'mcq_multi', 'true_false', 'fitb']),
 	text: z.string().min(1).max(2000),
-	mediaUrl: z.string().max(500).optional(),
+	mediaUrl: z
+		.string()
+		.max(500)
+		.refine((v) => /^https?:\/\//i.test(v) || v.startsWith('/'), {
+			message: 'Media URL must be an absolute path or an http(s) URL'
+		})
+		.optional(),
 	options: z.array(questionOptionSchema).optional(),
 	correctAnswer: z.union([
 		z.string(), // For fitb and true_false

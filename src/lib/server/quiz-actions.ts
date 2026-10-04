@@ -340,6 +340,10 @@ export async function createQuestion(formData: FormData) {
 	const processedData: Record<string, unknown> = {
 		...data,
 		orderIndex: Number(data.orderIndex),
+		mediaUrl:
+			typeof data.mediaUrl === 'string' && data.mediaUrl.trim() !== ''
+				? data.mediaUrl.trim()
+				: undefined,
 		options: data.options ? JSON.parse(data.options as string) : undefined,
 		codeSnippet: data.codeSnippet ? (data.codeSnippet as string) : undefined
 	};
@@ -402,6 +406,10 @@ export async function updateQuestion(formData: FormData) {
 	const processedData: Record<string, unknown> = {
 		...data,
 		orderIndex: data.orderIndex ? Number(data.orderIndex) : undefined,
+		mediaUrl:
+			typeof data.mediaUrl === 'string' && data.mediaUrl.trim() !== ''
+				? data.mediaUrl.trim()
+				: undefined,
 		options: data.options ? JSON.parse(data.options as string) : undefined,
 		codeSnippet: data.codeSnippet ? (data.codeSnippet as string) : undefined
 	};
@@ -419,6 +427,13 @@ export async function updateQuestion(formData: FormData) {
 
 	const { id, quizId, ...updateData } = parsed.data;
 
+	// Capture the previous mediaUrl before the update so a replaced or removed
+	// uploaded file can be deleted from disk.
+	const previousQuestion = await db.query.question.findFirst({
+		where: eq(question.id, id)
+	});
+	const previousMediaUrl = previousQuestion?.mediaUrl ?? null;
+
 	const updatedQuestion = await db
 		.update(question)
 		.set({
@@ -430,8 +445,8 @@ export async function updateQuestion(formData: FormData) {
 
 	// Handle media replacement / removal
 	if (removeMedia) {
-		if (updatedQuestion[0].mediaUrl) {
-			await deleteQuestionMedia(updatedQuestion[0].mediaUrl);
+		if (previousMediaUrl) {
+			await deleteQuestionMedia(previousMediaUrl);
 		}
 		const cleared = await db
 			.update(question)
@@ -443,8 +458,8 @@ export async function updateQuestion(formData: FormData) {
 
 	if (mediaFile && mediaFile.size > 0 && mediaFile.name) {
 		try {
-			if (updatedQuestion[0].mediaUrl) {
-				await deleteQuestionMedia(updatedQuestion[0].mediaUrl);
+			if (previousMediaUrl) {
+				await deleteQuestionMedia(previousMediaUrl);
 			}
 			const targetQuizId = quizId || updatedQuestion[0].quizId;
 			const mediaUrl = await saveQuestionMedia(targetQuizId, mediaFile);
@@ -460,6 +475,17 @@ export async function updateQuestion(formData: FormData) {
 				error: err instanceof Error ? err.message : 'Failed to save media file'
 			};
 		}
+	}
+
+	// If mediaUrl was changed to a different value (e.g. switched to an
+	// externally hosted URL), delete the previously uploaded file so it does
+	// not linger on disk. deleteQuestionMedia ignores non-uploads paths.
+	if (
+		updateData.mediaUrl !== undefined &&
+		updateData.mediaUrl !== previousMediaUrl &&
+		previousMediaUrl
+	) {
+		await deleteQuestionMedia(previousMediaUrl);
 	}
 
 	return { success: true, question: updatedQuestion[0] };

@@ -111,9 +111,14 @@ export async function importQuiz(jsonText: string) {
 		for (const q of questions) {
 			let mediaUrl: string | null = null;
 			if (q.mediaUrl) {
-				mediaUrl = await copyQuestionMedia(q.mediaUrl, newQuiz[0].id);
-				if (!mediaUrl) {
-					warnings.push(`Media file missing for question: "${q.text.slice(0, 60)}"`);
+				if (/^https?:\/\//i.test(q.mediaUrl)) {
+					// Externally hosted media needs no local copy.
+					mediaUrl = q.mediaUrl;
+				} else {
+					mediaUrl = await copyQuestionMedia(q.mediaUrl, newQuiz[0].id);
+					if (!mediaUrl) {
+						warnings.push(`Media file missing for question: "${q.text.slice(0, 60)}"`);
+					}
 				}
 			}
 			questionValues.push({

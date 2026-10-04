@@ -32,7 +32,7 @@
 	];
 
 	function mediaKind(url: string): 'image' | 'audio' | 'video' | 'other' {
-		const ext = url.split('.').pop()?.toLowerCase() ?? '';
+		const ext = url.split(/[?#]/)[0].split('.').pop()?.toLowerCase() ?? '';
 		if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return 'image';
 		if (['mp3', 'wav', 'ogg'].includes(ext)) return 'audio';
 		if (['mp4', 'webm', 'ogv'].includes(ext)) return 'video';
