@@ -768,16 +768,22 @@
 					<Save class="size-4" />
 					Save
 				</Button>
-				<Button
-					type="submit"
-					formaction="?/publish"
-					size="sm"
-					variant="default"
-					disabled={isSaving}
+				<span
+					title={quiz.questions.length === 0
+						? 'Add at least one question before publishing'
+						: undefined}
 				>
-					<Rocket class="size-4" />
-					Publish
-				</Button>
+					<Button
+						type="submit"
+						formaction="?/publish"
+						size="sm"
+						variant="default"
+						disabled={isSaving || quiz.questions.length === 0}
+					>
+						<Rocket class="size-4" />
+						Publish
+					</Button>
+				</span>
 			</div>
 		</div>
 	</div>
