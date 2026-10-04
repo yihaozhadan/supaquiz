@@ -41,6 +41,25 @@
 		answers[questionId] = value;
 	}
 
+	let advanceTimer: ReturnType<typeof setTimeout> | null = null;
+
+	function selectSingleOption(questionId: string, optionId: string) {
+		setSingleAnswer(questionId, optionId);
+		if (showAllOnOnePage || currentIndex >= totalQuestions - 1) return;
+		if (advanceTimer) clearTimeout(advanceTimer);
+		const fromIndex = currentIndex;
+		advanceTimer = setTimeout(() => {
+			advanceTimer = null;
+			if (currentIndex === fromIndex) goNext();
+		}, 300);
+	}
+
+	$effect(() => {
+		return () => {
+			if (advanceTimer) clearTimeout(advanceTimer);
+		};
+	});
+
 	function toggleMultiAnswer(questionId: string, optionId: string, checked: boolean) {
 		const current = Array.isArray(answers[questionId])
 			? [...(answers[questionId] as string[])]
@@ -148,7 +167,7 @@
 							name={`q-${question.id}`}
 							value={option.id}
 							checked={answers[question.id] === option.id}
-							onchange={() => setSingleAnswer(question.id, option.id as string)}
+							onchange={() => selectSingleOption(question.id, option.id as string)}
 							class="h-4 w-4"
 						/>
 						<span>{option.text}</span>
