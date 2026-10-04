@@ -20,8 +20,8 @@ export const quiz = sqliteTable('quiz', {
 	password: text('password'),
 	timeLimitSeconds: integer('time_limit_seconds'),
 	shuffleQuestions: integer('shuffle_questions', { mode: 'boolean' }).notNull().default(false),
-	maxAttempts: integer('max_attempts').notNull().default(1),
-	maxParticipants: integer('max_participants').notNull(),
+	maxAttempts: integer('max_attempts').default(1),
+	maxParticipants: integer('max_participants'),
 	allowBackNavigation: integer('allow_back_navigation', { mode: 'boolean' })
 		.notNull()
 		.default(true),

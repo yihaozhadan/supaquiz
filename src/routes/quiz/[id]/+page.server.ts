@@ -150,7 +150,7 @@ export const actions: Actions = {
 		const participantKey = resolveParticipantKey(intakeFormSchema, intakeFormData, participantId);
 
 		const attemptsSoFar = await countAttemptsForParticipant(quizData.id, participantKey);
-		if (attemptsSoFar >= quizData.maxAttempts) {
+		if (quizData.maxAttempts != null && attemptsSoFar >= quizData.maxAttempts) {
 			return fail(400, {
 				intakeError: 'You have reached the maximum number of attempts for this quiz'
 			});

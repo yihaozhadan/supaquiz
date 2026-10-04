@@ -37,7 +37,7 @@ export async function checkQuizAvailability(quizData: {
 	status: 'draft' | 'active' | 'expired';
 	activateAt: Date | null;
 	expireAt: Date | null;
-	maxParticipants: number;
+	maxParticipants: number | null;
 }): Promise<QuizAvailability> {
 	const now = Date.now();
 
@@ -59,7 +59,7 @@ export async function checkQuizAvailability(quizData: {
 		.from(attempt)
 		.where(eq(attempt.quizId, quizData.id));
 
-	if (attemptCount[0].count >= quizData.maxParticipants) {
+	if (quizData.maxParticipants != null && attemptCount[0].count >= quizData.maxParticipants) {
 		return { available: false, reason: 'full' };
 	}
 
@@ -128,7 +128,7 @@ export async function submitAttempt(input: SubmitAttemptInput) {
 	}
 
 	const attemptsSoFar = await countAttemptsForParticipant(input.quizId, input.participantKey);
-	if (attemptsSoFar >= quizData.maxAttempts) {
+	if (quizData.maxAttempts != null && attemptsSoFar >= quizData.maxAttempts) {
 		return { success: false as const, error: 'Maximum attempts reached for this quiz' };
 	}
 

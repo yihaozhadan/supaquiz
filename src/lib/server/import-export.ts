@@ -12,8 +12,8 @@ export interface QuizExportData {
 		password: string | null;
 		timeLimitSeconds: number | null;
 		shuffleQuestions: boolean;
-		maxAttempts: number;
-		maxParticipants: number;
+		maxAttempts: number | null;
+		maxParticipants: number | null;
 		allowBackNavigation: boolean;
 		questionDisplayMode: 'one_at_a_time' | 'all_on_one_page';
 		revealAnswersAfter: 'immediate' | 'never';

@@ -64,8 +64,18 @@
 	let title = $state(quiz.title);
 	let description = $state(quiz.description);
 	let password = $state(quiz.password || '');
-	let timeLimitSeconds = $state(quiz.timeLimitSeconds?.toString() || '');
+	let timeLimitMinutes = $state(
+		quiz.timeLimitSeconds != null
+			? String(Math.round((quiz.timeLimitSeconds / 60) * 100) / 100)
+			: ''
+	);
+	const timeLimitSecondsValue = $derived(
+		timeLimitMinutes !== '' && Number.isFinite(Number(timeLimitMinutes))
+			? String(Math.round(Number(timeLimitMinutes) * 60))
+			: ''
+	);
 	let maxAttempts = $state(quiz.maxAttempts?.toString() || '1');
+	let unlimitedAttempts = $state(quiz.maxAttempts == null);
 	let maxParticipants = $state(quiz.maxParticipants?.toString() || '');
 	let shuffleQuestions = $state(quiz.shuffleQuestions);
 	let allowBackNavigation = $state(quiz.allowBackNavigation);
@@ -179,7 +189,7 @@
 	const fieldToTab: Record<string, string> = {
 		title: 'details',
 		description: 'details',
-		timeLimitSeconds: 'settings',
+		timeLimitMinutes: 'settings',
 		maxAttempts: 'settings',
 		maxParticipants: 'settings',
 		activateAt: 'settings',
@@ -566,18 +576,20 @@
 				<CardContent class="space-y-5">
 					<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 						<div class="space-y-2">
-							<label for="timeLimitSeconds" class="text-sm font-medium text-foreground"
-								>Time Limit (seconds)</label
+							<label for="timeLimitMinutes" class="text-sm font-medium text-foreground"
+								>Time Limit (minutes)</label
 							>
 							<Input
 								type="number"
-								name="timeLimitSeconds"
-								id="timeLimitSeconds"
-								bind:value={timeLimitSeconds}
+								name="timeLimitMinutes"
+								id="timeLimitMinutes"
+								bind:value={timeLimitMinutes}
 								min="0"
+								step="any"
 								placeholder="No limit"
 								oninput={markChanged}
 							/>
+							<input type="hidden" name="timeLimitSeconds" value={timeLimitSecondsValue} />
 						</div>
 						<div class="space-y-2">
 							<label for="maxAttempts" class="text-sm font-medium text-foreground"
@@ -590,8 +602,13 @@
 								bind:value={maxAttempts}
 								min="1"
 								required
+								disabled={unlimitedAttempts}
+								placeholder={unlimitedAttempts ? 'Unlimited' : ''}
 								oninput={markChanged}
 							/>
+							{#if unlimitedAttempts}
+								<input type="hidden" name="maxAttempts" value="" />
+							{/if}
 						</div>
 						<div class="space-y-2">
 							<label for="maxParticipants" class="text-sm font-medium text-foreground"
@@ -603,7 +620,7 @@
 								id="maxParticipants"
 								bind:value={maxParticipants}
 								min="1"
-								required
+								placeholder="No limit"
 								oninput={markChanged}
 							/>
 						</div>
@@ -696,6 +713,15 @@
 								onCheckedChange={markChanged}
 								name="allowBackNavigation"
 							/>
+						</div>
+						<div class="flex items-center justify-between">
+							<div>
+								<p class="text-sm font-medium text-foreground">Unlimited Attempts</p>
+								<p class="text-xs text-muted-foreground">
+									Let participants retake the quiz without an attempt limit
+								</p>
+							</div>
+							<Switch bind:checked={unlimitedAttempts} onCheckedChange={markChanged} />
 						</div>
 						<div class="flex items-center justify-between">
 							<div>

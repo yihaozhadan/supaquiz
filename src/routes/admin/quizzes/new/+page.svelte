@@ -25,6 +25,13 @@
 	let isVisibleAfterExpiry = $state(true);
 	let questionDisplayMode = $state('one_at_a_time');
 	let revealAnswersAfter = $state('immediate');
+	let unlimitedAttempts = $state(false);
+	let timeLimitMinutes = $state('');
+	const timeLimitSecondsValue = $derived(
+		timeLimitMinutes !== '' && Number.isFinite(Number(timeLimitMinutes))
+			? String(Math.round(Number(timeLimitMinutes) * 60))
+			: ''
+	);
 
 	$effect(() => {
 		if (form?.error) toasts.error(form.error);
@@ -106,15 +113,18 @@
 		<CardContent class="space-y-5">
 			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 				<div class="space-y-2">
-					<Label for="timeLimitSeconds">Time Limit (seconds, optional)</Label>
+					<Label for="timeLimitMinutes">Time Limit (minutes, optional)</Label>
 					<Input
 						type="number"
-						name="timeLimitSeconds"
-						id="timeLimitSeconds"
+						name="timeLimitMinutes"
+						id="timeLimitMinutes"
+						bind:value={timeLimitMinutes}
 						min="0"
+						step="any"
 						placeholder="No limit"
 						disabled={isSubmitting}
 					/>
+					<input type="hidden" name="timeLimitSeconds" value={timeLimitSecondsValue} />
 				</div>
 				<div class="space-y-2">
 					<Label for="maxAttempts">Max Attempts</Label>
@@ -125,17 +135,21 @@
 						value="1"
 						min="1"
 						required
-						disabled={isSubmitting}
+						disabled={isSubmitting || unlimitedAttempts}
+						placeholder={unlimitedAttempts ? 'Unlimited' : ''}
 					/>
+					{#if unlimitedAttempts}
+						<input type="hidden" name="maxAttempts" value="" />
+					{/if}
 				</div>
 				<div class="space-y-2">
-					<Label for="maxParticipants">Max Participants</Label>
+					<Label for="maxParticipants">Max Participants (optional)</Label>
 					<Input
 						type="number"
 						name="maxParticipants"
 						id="maxParticipants"
 						min="1"
-						required
+						placeholder="No limit"
 						disabled={isSubmitting}
 					/>
 				</div>
@@ -187,6 +201,15 @@
 						bind:checked={allowBackNavigation}
 						disabled={isSubmitting}
 					/>
+				</div>
+				<div class="flex items-center justify-between">
+					<div>
+						<Label for="unlimitedAttempts">Unlimited Attempts</Label>
+						<p class="text-xs text-muted-foreground">
+							Let participants retake the quiz without an attempt limit
+						</p>
+					</div>
+					<Switch id="unlimitedAttempts" bind:checked={unlimitedAttempts} disabled={isSubmitting} />
 				</div>
 				<div class="flex items-center justify-between">
 					<div>

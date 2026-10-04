@@ -155,8 +155,13 @@ export async function createQuiz(formData: FormData) {
 	const processedData = {
 		...data,
 		timeLimitSeconds: data.timeLimitSeconds ? Number(data.timeLimitSeconds) : undefined,
-		maxAttempts: Number(data.maxAttempts),
-		maxParticipants: Number(data.maxParticipants),
+		maxAttempts:
+			data.maxAttempts === ''
+				? null
+				: data.maxAttempts !== undefined
+					? Number(data.maxAttempts)
+					: undefined,
+		maxParticipants: data.maxParticipants ? Number(data.maxParticipants) : null,
 		shuffleQuestions: data.shuffleQuestions === 'on',
 		allowBackNavigation: data.allowBackNavigation === 'on',
 		isVisibleAfterExpiry:
@@ -190,8 +195,14 @@ export async function updateQuiz(formData: FormData) {
 	const processedData = {
 		...data,
 		timeLimitSeconds: data.timeLimitSeconds ? Number(data.timeLimitSeconds) : undefined,
-		maxAttempts: data.maxAttempts ? Number(data.maxAttempts) : undefined,
-		maxParticipants: data.maxParticipants ? Number(data.maxParticipants) : undefined,
+		maxAttempts:
+			data.maxAttempts === '' ? null : data.maxAttempts ? Number(data.maxAttempts) : undefined,
+		maxParticipants:
+			data.maxParticipants === ''
+				? null
+				: data.maxParticipants
+					? Number(data.maxParticipants)
+					: undefined,
 		shuffleQuestions: data.shuffleQuestions === 'on',
 		allowBackNavigation: data.allowBackNavigation === 'on',
 		isVisibleAfterExpiry:
@@ -309,11 +320,6 @@ export async function toggleQuizStatus(formData: FormData) {
 
 		if (activeCount[0].count >= 5) {
 			return { success: false, error: 'Maximum 5 active quizzes allowed' };
-		}
-
-		// Check max_participants is set
-		if (!currentQuiz.maxParticipants || currentQuiz.maxParticipants <= 0) {
-			return { success: false, error: 'max_participants must be set before activating' };
 		}
 	}
 
