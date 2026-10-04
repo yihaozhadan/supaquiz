@@ -44,7 +44,9 @@
 	class="space-y-6"
 	use:enhance={() => {
 		isSubmitting = true;
-		return async () => {
+		return async ({ result, update }) => {
+			await update();
+			if (result.type === 'redirect') return;
 			isSubmitting = false;
 		};
 	}}

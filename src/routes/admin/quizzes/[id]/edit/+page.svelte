@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { flushSync } from 'svelte';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { beforeNavigate } from '$app/navigation';
@@ -175,6 +176,24 @@
 
 	let mainForm = $state<HTMLFormElement | null>(null);
 
+	const fieldToTab: Record<string, string> = {
+		title: 'details',
+		description: 'details',
+		timeLimitSeconds: 'settings',
+		maxAttempts: 'settings',
+		maxParticipants: 'settings',
+		activateAt: 'settings',
+		expireAt: 'settings'
+	};
+
+	function revealInvalidField(e: Event) {
+		const name = (e.target as HTMLInputElement).name;
+		const tab = fieldToTab[name];
+		if (tab && tab !== activeTab) {
+			flushSync(() => (activeTab = tab));
+		}
+	}
+
 	$effect(() => {
 		if (!hasUnsavedChanges) return;
 		const interval = setInterval(() => {
@@ -227,6 +246,7 @@
 	bind:this={mainForm}
 	method="POST"
 	action="?/update"
+	oninvalidcapture={revealInvalidField}
 	use:enhance={() => {
 		isSaving = true;
 		return async ({ update }) => {
