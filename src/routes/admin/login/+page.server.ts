@@ -36,17 +36,19 @@ function checkRateLimit(ip: string): boolean {
 export const actions: Actions = {
 	default: async ({ request, cookies, getClientAddress }) => {
 		const ip = getClientAddress();
-
-		if (!checkRateLimit(ip)) {
-			return fail(429, { error: 'Too many login attempts. Please try again later.' });
-		}
-
 		const formData = await request.formData();
 		const username = formData.get('username') as string;
 		const password = formData.get('password') as string;
 
+		if (!checkRateLimit(ip)) {
+			return fail(429, {
+				error: 'Too many login attempts. Please try again later.',
+				username
+			});
+		}
+
 		if (!username || !password) {
-			return fail(400, { error: 'Username and password are required' });
+			return fail(400, { error: 'Username and password are required', username });
 		}
 
 		const adminRecord = await db.query.admin.findFirst({
@@ -54,13 +56,13 @@ export const actions: Actions = {
 		});
 
 		if (!adminRecord) {
-			return fail(401, { error: 'Invalid credentials' });
+			return fail(401, { error: 'Invalid credentials', username });
 		}
 
 		const isValid = await argon2.verify(adminRecord.passwordHash, password);
 
 		if (!isValid) {
-			return fail(401, { error: 'Invalid credentials' });
+			return fail(401, { error: 'Invalid credentials', username });
 		}
 
 		await createSession(username, cookies);

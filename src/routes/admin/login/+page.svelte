@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { page } from '$app/stores';
 	import {
 		Card,
 		CardContent,
@@ -11,9 +10,12 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
-	import { Loader2, LogIn } from 'lucide-svelte';
+	import { Loader2, LogIn, TriangleAlert } from 'lucide-svelte';
+
+	let { form } = $props();
 
 	let isSubmitting = $state(false);
+	let password = $state('');
 </script>
 
 <div
@@ -33,7 +35,10 @@
 				class="space-y-4"
 				use:enhance={() => {
 					isSubmitting = true;
-					return async () => {
+					return async ({ result, update }) => {
+						await update();
+						if (result.type === 'redirect') return;
+						if (result.type === 'failure') password = '';
 						isSubmitting = false;
 					};
 				}}
@@ -47,6 +52,8 @@
 						required
 						autocomplete="username"
 						placeholder="Enter your username"
+						value={form?.username ?? ''}
+						aria-invalid={!!form?.error}
 						disabled={isSubmitting}
 					/>
 				</div>
@@ -60,18 +67,23 @@
 						required
 						autocomplete="current-password"
 						placeholder="Enter your password"
+						bind:value={password}
+						aria-invalid={!!form?.error}
 						disabled={isSubmitting}
 					/>
 				</div>
 
-				{#if $page.form?.error}
-					<div
-						role="alert"
-						class="rounded-md border border-destructive/20 bg-destructive/10 px-4 py-3 text-center text-sm text-destructive"
-					>
-						{$page.form.error}
-					</div>
-				{/if}
+				<div aria-live="polite">
+					{#if form?.error}
+						<div
+							role="alert"
+							class="flex items-start gap-3 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+						>
+							<TriangleAlert class="mt-0.5 size-4 shrink-0" />
+							<span>{form.error}</span>
+						</div>
+					{/if}
+				</div>
 
 				<Button type="submit" class="w-full" size="lg" disabled={isSubmitting}>
 					{#if isSubmitting}
