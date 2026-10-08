@@ -58,6 +58,14 @@
 </svelte:head>
 
 <div class="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-4 py-10">
+	{#if data.preview}
+		<div
+			class="mb-4 flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2.5 text-sm text-primary"
+		>
+			<Eye class="size-4 shrink-0" />
+			<span>Preview mode — submissions won't be recorded.</span>
+		</div>
+	{/if}
 	{#if !data.availability.available && !data.viewOnly}
 		<Card>
 			<CardHeader class="text-center">
@@ -288,6 +296,9 @@
 						};
 					}}
 				>
+					{#if data.preview}
+						<input type="hidden" name="preview" value="1" />
+					{/if}
 					{#each data.quiz.intakeFormSchema as field (field.name)}
 						<div class="space-y-2">
 							<Label for={field.name}>

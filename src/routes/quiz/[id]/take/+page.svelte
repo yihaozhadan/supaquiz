@@ -3,7 +3,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
-	import { ChevronLeft, ChevronRight, Clock, Loader2 } from 'lucide-svelte';
+	import { ChevronLeft, ChevronRight, Clock, Eye, Loader2 } from 'lucide-svelte';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -124,6 +124,14 @@
 </svelte:head>
 
 <div class="mx-auto max-w-2xl px-4 py-8">
+	{#if data.preview}
+		<div
+			class="mb-4 flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2.5 text-sm text-primary"
+		>
+			<Eye class="size-4 shrink-0" />
+			<span>Preview mode — this attempt won't be recorded.</span>
+		</div>
+	{/if}
 	<div class="mb-4 flex items-center justify-between">
 		<h1 class="text-lg font-semibold">{data.quiz.title}</h1>
 		{#if timeLeft !== null}
