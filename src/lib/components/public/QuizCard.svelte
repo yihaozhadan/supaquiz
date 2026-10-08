@@ -12,6 +12,7 @@
 		timeLimitSeconds,
 		attemptCount,
 		isPasswordProtected = false,
+		status = 'active',
 		activateAt = null,
 		expireAt = null
 	}: {
@@ -22,6 +23,7 @@
 		timeLimitSeconds?: number | null;
 		attemptCount: number;
 		isPasswordProtected?: boolean;
+		status?: 'draft' | 'scheduled' | 'active' | 'expired' | 'archived';
 		activateAt?: Date | string | null;
 		expireAt?: Date | string | null;
 	} = $props();
@@ -34,6 +36,7 @@
 	const activateAtTime = $derived(activateAt ? new Date(activateAt).getTime() : null);
 	const expireAtTime = $derived(expireAt ? new Date(expireAt).getTime() : null);
 
+	const isExpired = $derived(status === 'expired');
 	const isUpcoming = $derived(activateAtTime !== null && activateAtTime > Date.now());
 	const isEndingSoon = $derived(
 		expireAtTime !== null &&
@@ -57,8 +60,11 @@
 	</Card.Header>
 
 	<Card.Content class="flex-1 space-y-3">
-		{#if isUpcoming || isEndingSoon}
+		{#if isExpired || isUpcoming || isEndingSoon}
 			<div class="flex flex-wrap gap-2">
+				{#if isExpired}
+					<Badge variant="outline" class="text-muted-foreground">Expired</Badge>
+				{/if}
 				{#if isUpcoming}
 					<Badge variant="secondary">Upcoming</Badge>
 				{/if}
@@ -96,7 +102,7 @@
 				class: 'min-h-11 w-full group-hover:border-primary/50'
 			})}
 		>
-			Start Quiz
+			{isExpired ? 'View Questions' : 'Start Quiz'}
 			<ArrowRight class="ml-1.5 h-4 w-4" />
 		</a>
 	</Card.Footer>

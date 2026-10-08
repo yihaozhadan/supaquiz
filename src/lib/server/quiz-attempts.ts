@@ -3,6 +3,7 @@ import { db } from './db';
 import { attempt, question, quiz } from './db/schema';
 import { normalizeCorrectAnswer, normalizeQuestion } from './quiz-actions';
 import { gradeQuiz, type GradableQuestion } from './grading';
+import { getEffectiveStatus, type StoredQuizStatus } from '$lib/quiz-status';
 
 export interface IntakeFormField {
 	name: string;
@@ -34,24 +35,21 @@ export async function getQuizForTaking(id: string) {
  */
 export async function checkQuizAvailability(quizData: {
 	id: string;
-	status: 'draft' | 'active' | 'expired';
+	status: StoredQuizStatus;
 	activateAt: Date | null;
 	expireAt: Date | null;
 	maxParticipants: number | null;
 }): Promise<QuizAvailability> {
-	const now = Date.now();
+	const effectiveStatus = getEffectiveStatus(quizData);
 
-	if (quizData.status === 'expired') {
+	if (effectiveStatus === 'expired') {
 		return { available: false, reason: 'expired' };
 	}
-	if (quizData.expireAt && quizData.expireAt.getTime() < now) {
-		return { available: false, reason: 'expired' };
-	}
-	if (quizData.status !== 'active') {
-		return { available: false, reason: 'inactive' };
-	}
-	if (quizData.activateAt && quizData.activateAt.getTime() > now) {
+	if (effectiveStatus === 'scheduled') {
 		return { available: false, reason: 'not_started' };
+	}
+	if (effectiveStatus !== 'active') {
+		return { available: false, reason: 'inactive' };
 	}
 
 	const attemptCount = await db

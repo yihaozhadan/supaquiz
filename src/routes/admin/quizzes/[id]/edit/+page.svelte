@@ -24,6 +24,7 @@
 	import EmptyState from '$lib/components/admin/EmptyState.svelte';
 	import QuestionEditorSheet from '$lib/components/admin/QuestionEditorSheet.svelte';
 	import { toasts } from '$lib/components/admin/toast';
+	import { getEffectiveStatus, validateSchedule, QUIZ_STATUS_LABELS } from '$lib/quiz-status';
 	import {
 		ArrowLeft,
 		Plus,
@@ -83,10 +84,63 @@
 	let isVisibleAfterExpiry = $state(quiz.isVisibleAfterExpiry ?? true);
 	let questionDisplayMode = $state(quiz.questionDisplayMode);
 	let revealAnswersAfter = $state(quiz.revealAnswersAfter);
-	let activateAt = $state(
-		quiz.activateAt ? new Date(quiz.activateAt).toISOString().slice(0, 16) : ''
+	// datetime-local inputs work in local time; toISOString() would show UTC.
+	function toLocalInputValue(value: Date | string | null): string {
+		if (!value) return '';
+		const d = new Date(value);
+		const pad = (n: number) => String(n).padStart(2, '0');
+		return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+	}
+	let activateAt = $state(toLocalInputValue(quiz.activateAt));
+	let expireAt = $state(toLocalInputValue(quiz.expireAt));
+
+	const scheduleError = $derived(validateSchedule(activateAt || null, expireAt || null));
+
+	// Live preview of the lifecycle status the current form values produce.
+	const effectiveStatus = $derived(
+		getEffectiveStatus({ status: quiz.status, activateAt, expireAt })
 	);
-	let expireAt = $state(quiz.expireAt ? new Date(quiz.expireAt).toISOString().slice(0, 16) : '');
+
+	// Status the quiz would have if published with the current schedule.
+	const publishStatus = $derived(getEffectiveStatus({ status: 'active', activateAt, expireAt }));
+
+	const statusBadgeConfig: Record<
+		string,
+		{ variant: 'default' | 'secondary' | 'destructive' | 'outline'; class?: string }
+	> = {
+		draft: { variant: 'secondary' },
+		scheduled: {
+			variant: 'outline',
+			class:
+				'border-sky-300 bg-sky-50 text-sky-700 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-300'
+		},
+		active: { variant: 'default' },
+		expired: { variant: 'destructive' },
+		archived: { variant: 'outline', class: 'text-muted-foreground' }
+	};
+
+	const scheduleHint = $derived.by(() => {
+		if (quiz.status === 'draft') {
+			return activateAt || expireAt
+				? 'The activation window applies once the quiz is published.'
+				: null;
+		}
+		if (quiz.status === 'archived') return null;
+		if (effectiveStatus === 'scheduled' && activateAt) {
+			return `Scheduled — the quiz becomes active on ${new Date(activateAt).toLocaleString()}.`;
+		}
+		if (effectiveStatus === 'expired') {
+			return 'This window has passed — the quiz is expired and view-only for the public.';
+		}
+		if (activateAt && expireAt) {
+			return `Active from ${new Date(activateAt).toLocaleString()} until ${new Date(
+				expireAt
+			).toLocaleString()}.`;
+		}
+		if (expireAt) return `Active until ${new Date(expireAt).toLocaleString()}.`;
+		if (activateAt) return `Active since ${new Date(activateAt).toLocaleString()}.`;
+		return null;
+	});
 
 	interface IntakeField {
 		name: string;
@@ -235,6 +289,12 @@
 </script>
 
 <PageHeader title="Edit Quiz" description={quiz.title}>
+	<Badge
+		variant={statusBadgeConfig[effectiveStatus]?.variant}
+		class={statusBadgeConfig[effectiveStatus]?.class}
+	>
+		{QUIZ_STATUS_LABELS[effectiveStatus]}
+	</Badge>
 	<Button href="/quiz/{quiz.id}?preview=1" target="_blank" variant="outline" size="sm">
 		<Eye class="size-4" />
 		Preview
@@ -262,7 +322,12 @@
 	method="POST"
 	action="?/update"
 	oninvalidcapture={revealInvalidField}
-	use:enhance={() => {
+	use:enhance={({ cancel }) => {
+		if (scheduleError) {
+			toasts.error(scheduleError);
+			cancel();
+			return;
+		}
 		isSaving = true;
 		return async ({ update }) => {
 			await update();
@@ -663,31 +728,46 @@
 
 					<Separator />
 
-					<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-						<div class="space-y-2">
-							<label for="activateAt" class="text-sm font-medium text-foreground"
-								>Activation Date (optional)</label
-							>
-							<Input
-								type="datetime-local"
-								name="activateAt"
-								id="activateAt"
-								bind:value={activateAt}
-								oninput={markChanged}
-							/>
+					<div class="space-y-2">
+						<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+							<div class="space-y-2">
+								<label for="activateAt" class="text-sm font-medium text-foreground"
+									>Activation Date (optional)</label
+								>
+								<Input
+									type="datetime-local"
+									name="activateAt"
+									id="activateAt"
+									bind:value={activateAt}
+									max={expireAt || undefined}
+									oninput={markChanged}
+								/>
+								<p class="text-xs text-muted-foreground">
+									A future date publishes the quiz as Scheduled.
+								</p>
+							</div>
+							<div class="space-y-2">
+								<label for="expireAt" class="text-sm font-medium text-foreground"
+									>Expiration Date (optional)</label
+								>
+								<Input
+									type="datetime-local"
+									name="expireAt"
+									id="expireAt"
+									bind:value={expireAt}
+									min={activateAt || undefined}
+									oninput={markChanged}
+								/>
+								<p class="text-xs text-muted-foreground">
+									Once passed, the quiz becomes Expired and view-only.
+								</p>
+							</div>
 						</div>
-						<div class="space-y-2">
-							<label for="expireAt" class="text-sm font-medium text-foreground"
-								>Expiration Date (optional)</label
-							>
-							<Input
-								type="datetime-local"
-								name="expireAt"
-								id="expireAt"
-								bind:value={expireAt}
-								oninput={markChanged}
-							/>
-						</div>
+						{#if scheduleError}
+							<p class="text-sm font-medium text-destructive">{scheduleError}</p>
+						{:else if scheduleHint}
+							<p class="text-xs text-muted-foreground">{scheduleHint}</p>
+						{/if}
 					</div>
 
 					<Separator />
@@ -769,24 +849,30 @@
 					<X class="size-4" />
 					Cancel
 				</Button>
-				<Button type="submit" size="sm" disabled={isSaving}>
+				<Button type="submit" size="sm" disabled={isSaving || Boolean(scheduleError)}>
 					<Save class="size-4" />
 					Save
 				</Button>
 				<span
 					title={quiz.questions.length === 0
 						? 'Add at least one question before publishing'
-						: undefined}
+						: scheduleError
+							? scheduleError
+							: publishStatus === 'scheduled'
+								? 'Publish now — the quiz stays Scheduled until the activation date'
+								: publishStatus === 'expired'
+									? 'Publish now — the window has already passed, so the quiz will be Expired'
+									: undefined}
 				>
 					<Button
 						type="submit"
 						formaction="?/publish"
 						size="sm"
 						variant="default"
-						disabled={isSaving || quiz.questions.length === 0}
+						disabled={isSaving || quiz.questions.length === 0 || Boolean(scheduleError)}
 					>
 						<Rocket class="size-4" />
-						Publish
+						{publishStatus === 'scheduled' ? 'Schedule' : 'Publish'}
 					</Button>
 				</span>
 			</div>

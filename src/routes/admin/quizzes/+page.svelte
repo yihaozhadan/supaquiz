@@ -23,7 +23,10 @@
 		Search,
 		Upload,
 		FileJson,
-		Eye
+		Eye,
+		Archive,
+		ArchiveRestore,
+		CalendarClock
 	} from 'lucide-svelte';
 
 	let { data, form } = $props();
@@ -47,29 +50,49 @@
 		title: string;
 		description: string | null;
 		status: string;
+		effectiveStatus: string;
+		activateAt: Date | string | null;
+		expireAt: Date | string | null;
 		questionCount: number;
 		attemptCount: number;
-		createdAt: string;
+		createdAt: Date | string;
 	}
 
-	const statusColors: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-		draft: 'secondary',
-		active: 'default',
-		expired: 'destructive'
+	const statusConfig: Record<
+		string,
+		{ label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; class?: string }
+	> = {
+		draft: { label: 'Draft', variant: 'secondary' },
+		scheduled: {
+			label: 'Scheduled',
+			variant: 'outline',
+			class:
+				'border-sky-300 bg-sky-50 text-sky-700 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-300'
+		},
+		active: { label: 'Active', variant: 'default' },
+		expired: { label: 'Expired', variant: 'destructive' },
+		archived: { label: 'Archived', variant: 'outline', class: 'text-muted-foreground' }
 	};
 
-	const statusLabels: Record<string, string> = {
-		draft: 'Draft',
-		active: 'Active',
-		expired: 'Expired'
-	};
+	function statusHint(quiz: Quiz): string | null {
+		if (quiz.effectiveStatus === 'scheduled' && quiz.activateAt) {
+			return `Starts ${new Date(quiz.activateAt).toLocaleString()}`;
+		}
+		if (quiz.effectiveStatus === 'expired' && quiz.expireAt) {
+			return `Ended ${new Date(quiz.expireAt).toLocaleString()}`;
+		}
+		if (quiz.effectiveStatus === 'active' && quiz.expireAt) {
+			return `Ends ${new Date(quiz.expireAt).toLocaleString()}`;
+		}
+		return null;
+	}
 
 	let filteredQuizzes = $derived(
 		data.quizzes.filter((quiz) => {
 			const matchesSearch =
 				quiz.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
 				(quiz.description && quiz.description.toLowerCase().includes(searchQuery.toLowerCase()));
-			const matchesStatus = statusFilter === 'all' || quiz.status === statusFilter;
+			const matchesStatus = statusFilter === 'all' || quiz.effectiveStatus === statusFilter;
 			return matchesSearch && matchesStatus;
 		})
 	);
@@ -123,13 +146,15 @@
 		}}
 	>
 		<Select.Trigger class="w-40">
-			{statusFilter === 'all' ? 'All Status' : statusLabels[statusFilter]}
+			{statusFilter === 'all' ? 'All Status' : statusConfig[statusFilter]?.label}
 		</Select.Trigger>
 		<Select.Content>
 			<Select.Item value="all">All Status</Select.Item>
 			<Select.Item value="draft">Draft</Select.Item>
+			<Select.Item value="scheduled">Scheduled</Select.Item>
 			<Select.Item value="active">Active</Select.Item>
 			<Select.Item value="expired">Expired</Select.Item>
+			<Select.Item value="archived">Archived</Select.Item>
 		</Select.Content>
 	</Select.Root>
 </div>
@@ -163,9 +188,19 @@
 					{/if}
 				</div>
 			{:else if column.id === 'status'}
-				<Badge variant={statusColors[quiz.status]}>
-					{statusLabels[quiz.status]}
-				</Badge>
+				{@const config = statusConfig[quiz.effectiveStatus] ?? statusConfig.draft}
+				{@const hint = statusHint(quiz)}
+				<div class="space-y-1">
+					<Badge variant={config.variant} class={config.class}>
+						{#if quiz.effectiveStatus === 'scheduled'}
+							<CalendarClock class="size-3" />
+						{/if}
+						{config.label}
+					</Badge>
+					{#if hint}
+						<div class="text-xs whitespace-nowrap text-muted-foreground">{hint}</div>
+					{/if}
+				</div>
 			{:else if column.id === 'questionCount'}
 				{quiz.questionCount}
 			{:else if column.id === 'attemptCount'}
@@ -217,25 +252,43 @@
 									</button>
 								</form>
 							</DropdownMenu.Item>
-							<DropdownMenu.Item>
-								<form method="POST" action="?/toggleStatus" class="w-full">
-									<input type="hidden" name="id" value={quiz.id} />
-									<input
-										type="hidden"
-										name="status"
-										value={quiz.status === 'draft' ? 'active' : 'draft'}
-									/>
-									<button type="submit" class="flex w-full items-center">
-										{#if quiz.status === 'draft'}
+							{#if quiz.status === 'archived'}
+								<DropdownMenu.Item>
+									<form method="POST" action="?/toggleStatus" class="w-full">
+										<input type="hidden" name="id" value={quiz.id} />
+										<input type="hidden" name="status" value="draft" />
+										<button type="submit" class="flex w-full items-center">
+											<ArchiveRestore class="mr-2 size-4" />
+											Restore to Draft
+										</button>
+									</form>
+								</DropdownMenu.Item>
+							{:else}
+								<DropdownMenu.Item>
+									<form method="POST" action="?/toggleStatus" class="w-full">
+										<input type="hidden" name="id" value={quiz.id} />
+										<input
+											type="hidden"
+											name="status"
+											value={quiz.status === 'draft' ? 'active' : 'draft'}
+										/>
+										<button type="submit" class="flex w-full items-center">
 											<Download class="mr-2 size-4" />
-											Activate
-										{:else}
-											<Download class="mr-2 size-4" />
-											Deactivate
-										{/if}
-									</button>
-								</form>
-							</DropdownMenu.Item>
+											{quiz.status === 'draft' ? 'Activate' : 'Deactivate'}
+										</button>
+									</form>
+								</DropdownMenu.Item>
+								<DropdownMenu.Item>
+									<form method="POST" action="?/toggleStatus" class="w-full">
+										<input type="hidden" name="id" value={quiz.id} />
+										<input type="hidden" name="status" value="archived" />
+										<button type="submit" class="flex w-full items-center">
+											<Archive class="mr-2 size-4" />
+											Archive
+										</button>
+									</form>
+								</DropdownMenu.Item>
+							{/if}
 							<DropdownMenu.Separator />
 							<DropdownMenu.Item variant="destructive" onSelect={() => handleDeleteClick(quiz)}>
 								<Trash2 class="mr-2 size-4" />
@@ -262,7 +315,17 @@
 		<AlertDialog.Footer>
 			<AlertDialog.Cancel onclick={() => (quizToDelete = null)}>Cancel</AlertDialog.Cancel>
 			<AlertDialog.Action>
-				<form method="POST" action="?/delete" use:enhance>
+				<form
+					method="POST"
+					action="?/delete"
+					use:enhance={() => {
+						deleteDialogOpen = false;
+						quizToDelete = null;
+						return async ({ update }) => {
+							await update();
+						};
+					}}
+				>
 					<input type="hidden" name="id" value={quizToDelete?.id} />
 					<button type="submit" class="w-full">Delete</button>
 				</form>

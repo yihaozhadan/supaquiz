@@ -33,16 +33,26 @@
 	]);
 
 	const statusConfig = [
-		{ key: 'draft' as const, label: 'Draft', color: 'bg-secondary text-secondary-foreground' },
+		{ key: 'draft' as const, label: 'Draft', bar: 'bg-muted-foreground/30' },
+		{
+			key: 'scheduled' as const,
+			label: 'Scheduled',
+			bar: 'bg-sky-400'
+		},
 		{
 			key: 'active' as const,
 			label: 'Active',
-			color: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400'
+			bar: 'bg-emerald-500'
 		},
 		{
 			key: 'expired' as const,
 			label: 'Expired',
-			color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+			bar: 'bg-red-400'
+		},
+		{
+			key: 'archived' as const,
+			label: 'Archived',
+			bar: 'bg-muted-foreground/50'
 		}
 	];
 
@@ -191,12 +201,7 @@
 								</div>
 								<div class="h-2 w-full overflow-hidden rounded-full bg-muted">
 									<div
-										class="h-full rounded-full transition-all duration-500 ease-out {s.key ===
-										'active'
-											? 'bg-emerald-500'
-											: s.key === 'expired'
-												? 'bg-red-400'
-												: 'bg-muted-foreground/30'}"
+										class="h-full rounded-full transition-all duration-500 ease-out {s.bar}"
 										style="width: {pct}%"
 									></div>
 								</div>
