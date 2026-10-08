@@ -161,6 +161,27 @@ export async function submitAttempt(input: SubmitAttemptInput) {
 	};
 }
 
+/**
+ * Grade a set of answers for a quiz without persisting anything.
+ * Used for admin previews: availability and attempt limits are not
+ * enforced because a preview is the owner checking their own quiz.
+ */
+export async function gradePreviewAttempt(quizId: string, answers: Record<string, unknown>) {
+	const quizData = await db.query.quiz.findFirst({ where: eq(quiz.id, quizId) });
+	if (!quizData) {
+		return { success: false as const, error: 'Quiz not found' };
+	}
+
+	const questions = await db.query.question.findMany({ where: eq(question.quizId, quizId) });
+	const gradable: GradableQuestion[] = questions.map((q) => ({
+		id: q.id,
+		type: q.type,
+		correctAnswer: normalizeCorrectAnswer(q.type, q.correctAnswer)
+	}));
+
+	return { success: true as const, grading: gradeQuiz(gradable, answers) };
+}
+
 export async function getAttemptById(id: string) {
 	return db.query.attempt.findFirst({ where: eq(attempt.id, id) });
 }

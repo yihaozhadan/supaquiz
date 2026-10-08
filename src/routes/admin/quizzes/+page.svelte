@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { resolve } from '$app/paths';
 	import { invalidateAll } from '$app/navigation';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
@@ -21,7 +22,8 @@
 		Plus,
 		Search,
 		Upload,
-		FileJson
+		FileJson,
+		Eye
 	} from 'lucide-svelte';
 
 	let { data, form } = $props();
@@ -192,6 +194,13 @@
 									View Results
 								</DropdownMenu.Item>
 							</a>
+							<DropdownMenu.Item
+								onSelect={() =>
+									window.open(`${resolve('/quiz/[id]', { id: quiz.id })}?preview=1`, '_blank')}
+							>
+								<Eye class="mr-2 size-4" />
+								Preview
+							</DropdownMenu.Item>
 							<DropdownMenu.Separator />
 							<a href="/admin/quizzes/{quiz.id}/export" class="contents">
 								<DropdownMenu.Item>

@@ -8,7 +8,8 @@
 	} from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import { buttonVariants } from '$lib/components/ui/button';
-	import { CheckCircle2, Trophy, XCircle } from 'lucide-svelte';
+	import { resolve } from '$app/paths';
+	import { CheckCircle2, Eye, Trophy, XCircle } from 'lucide-svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -44,6 +45,14 @@
 </svelte:head>
 
 <div class="mx-auto max-w-2xl px-4 py-10">
+	{#if data.isPreview}
+		<div
+			class="mb-4 flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2.5 text-sm text-primary"
+		>
+			<Eye class="size-4 shrink-0" />
+			<span>Preview result — this attempt was not recorded.</span>
+		</div>
+	{/if}
 	<Card>
 		<CardHeader class="text-center">
 			<div class="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
@@ -103,7 +112,15 @@
 		</div>
 	{/if}
 
-	<div class="mt-8 flex justify-center">
+	<div class="mt-8 flex justify-center gap-3">
+		{#if data.isPreview}
+			<a
+				href={resolve('/admin/quizzes/[id]/edit', { id: data.quizId })}
+				class={buttonVariants({ variant: 'outline', class: 'min-h-11' })}
+			>
+				Back to quiz editor
+			</a>
+		{/if}
 		<a href="/quizzes" class={buttonVariants({ variant: 'outline', class: 'min-h-11' })}>
 			Browse more quizzes
 		</a>

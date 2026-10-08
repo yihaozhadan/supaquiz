@@ -16,6 +16,7 @@ import {
 	isPasswordVerified,
 	markPasswordVerified
 } from '$lib/server/quiz-session';
+import { verifySession } from '$lib/server/auth';
 import type { Actions, PageServerLoad } from './$types';
 
 function safeParse<T>(value: unknown): T | null {
@@ -40,12 +41,17 @@ async function loadQuizMeta(id: string) {
 	return { ...quizData, questionCount: questionCount[0].count };
 }
 
-export const load: PageServerLoad = async ({ params, cookies }) => {
+export const load: PageServerLoad = async ({ params, cookies, url }) => {
 	const quizData = await loadQuizMeta(params.id);
 	if (!quizData) error(404, 'Quiz not found');
 
-	const availability = await checkQuizAvailability(quizData);
-	const passwordRequired = Boolean(quizData.password);
+	// Admins can preview a quiz regardless of status/schedule via ?preview=1.
+	const preview = url.searchParams.get('preview') === '1' && Boolean(await verifySession(cookies));
+
+	const availability = preview
+		? ({ available: true } as const)
+		: await checkQuizAvailability(quizData);
+	const passwordRequired = !preview && Boolean(quizData.password);
 	const passwordVerified = passwordRequired ? isPasswordVerified(cookies, quizData.id) : true;
 
 	const viewOnly =
@@ -100,6 +106,7 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 		availability,
 		passwordRequired,
 		passwordVerified,
+		preview,
 		viewOnly,
 		questions
 	};
@@ -125,16 +132,20 @@ export const actions: Actions = {
 		const quizData = await loadQuizMeta(params.id);
 		if (!quizData) error(404, 'Quiz not found');
 
-		if (quizData.password && !isPasswordVerified(cookies, quizData.id)) {
+		const formData = await request.formData();
+		const preview = formData.get('preview') === '1' && Boolean(await verifySession(cookies));
+
+		if (!preview && quizData.password && !isPasswordVerified(cookies, quizData.id)) {
 			return fail(403, { intakeError: 'Password verification required' });
 		}
 
-		const availability = await checkQuizAvailability(quizData);
-		if (!availability.available) {
-			return fail(400, { intakeError: 'This quiz is not currently available' });
+		if (!preview) {
+			const availability = await checkQuizAvailability(quizData);
+			if (!availability.available) {
+				return fail(400, { intakeError: 'This quiz is not currently available' });
+			}
 		}
 
-		const formData = await request.formData();
 		const intakeFormSchema = safeParse<IntakeFormField[]>(quizData.intakeFormSchema) ?? [];
 		const intakeFormData: Record<string, unknown> = {};
 
@@ -149,11 +160,13 @@ export const actions: Actions = {
 		const participantId = getOrCreateParticipantId(cookies);
 		const participantKey = resolveParticipantKey(intakeFormSchema, intakeFormData, participantId);
 
-		const attemptsSoFar = await countAttemptsForParticipant(quizData.id, participantKey);
-		if (quizData.maxAttempts != null && attemptsSoFar >= quizData.maxAttempts) {
-			return fail(400, {
-				intakeError: 'You have reached the maximum number of attempts for this quiz'
-			});
+		if (!preview && quizData.maxAttempts != null) {
+			const attemptsSoFar = await countAttemptsForParticipant(quizData.id, participantKey);
+			if (attemptsSoFar >= quizData.maxAttempts) {
+				return fail(400, {
+					intakeError: 'You have reached the maximum number of attempts for this quiz'
+				});
+			}
 		}
 
 		const questions = await db.query.question.findMany({
@@ -175,7 +188,8 @@ export const actions: Actions = {
 			participantKey,
 			intakeFormData,
 			questionOrder,
-			startedAt: Date.now()
+			startedAt: Date.now(),
+			preview
 		});
 
 		redirect(303, `/quiz/${quizData.id}/take`);

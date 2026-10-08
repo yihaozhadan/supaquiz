@@ -2,21 +2,34 @@ import { error, fail, redirect } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { question, quiz } from '$lib/server/db/schema';
-import { checkQuizAvailability, submitAttempt } from '$lib/server/quiz-attempts';
+import {
+	checkQuizAvailability,
+	gradePreviewAttempt,
+	submitAttempt
+} from '$lib/server/quiz-attempts';
 import { normalizeQuestion } from '$lib/server/quiz-actions';
 import { clearQuizSession, getQuizSession } from '$lib/server/quiz-session';
 import { clearDraft, getDraft } from '$lib/server/draft-store';
+import { savePreviewAttempt } from '$lib/server/preview-store';
+import { verifySession } from '$lib/server/auth';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ params, cookies }) => {
+export const load: PageServerLoad = async ({ params, cookies, url }) => {
 	const session = await getQuizSession(cookies, params.id);
-	if (!session) redirect(303, `/quiz/${params.id}`);
+	const previewParam = url.searchParams.get('preview') === '1' ? '?preview=1' : '';
+	if (!session) redirect(303, `/quiz/${params.id}${previewParam}`);
 
 	const quizData = await db.query.quiz.findFirst({ where: eq(quiz.id, params.id) });
 	if (!quizData) error(404, 'Quiz not found');
 
-	const availability = await checkQuizAvailability(quizData);
-	if (!availability.available) redirect(303, `/quiz/${params.id}`);
+	// Preview sessions (admins only) bypass availability so drafts and
+	// scheduled quizzes can be exercised before publishing.
+	if (session.preview) {
+		if (!(await verifySession(cookies))) redirect(303, `/quiz/${params.id}`);
+	} else {
+		const availability = await checkQuizAvailability(quizData);
+		if (!availability.available) redirect(303, `/quiz/${params.id}`);
+	}
 
 	const questions = await db.query.question.findMany({ where: eq(question.quizId, params.id) });
 	const questionsById = new Map(questions.map((q) => [q.id, q]));
@@ -51,6 +64,7 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 			allowBackNavigation: quizData.allowBackNavigation,
 			questionDisplayMode: quizData.questionDisplayMode
 		},
+		preview: session.preview === true,
 		questions: orderedQuestions,
 		startedAt: session.startedAt,
 		draftAnswers: draft ?? {}
@@ -72,6 +86,35 @@ export const actions: Actions = {
 		}
 
 		const timeTakenSeconds = Math.max(0, Math.round((Date.now() - session.startedAt) / 1000));
+
+		if (session.preview) {
+			if (!(await verifySession(cookies))) {
+				return fail(403, { error: 'Preview requires an admin session' });
+			}
+
+			const result = await gradePreviewAttempt(params.id, answers);
+			if (!result.success) {
+				return fail(400, { error: result.error });
+			}
+
+			const previewId = `preview-${crypto.randomUUID()}`;
+			savePreviewAttempt({
+				id: previewId,
+				quizId: params.id,
+				participantKey: session.participantKey,
+				intakeFormData: session.intakeFormData,
+				answers,
+				score: result.grading.score,
+				totalQuestions: result.grading.totalQuestions,
+				timeTakenSeconds,
+				submittedAt: new Date()
+			});
+
+			clearQuizSession(cookies, params.id);
+			clearDraft(params.id, session.participantKey);
+
+			redirect(303, `/quiz/${params.id}/results/${previewId}`);
+		}
 
 		const result = await submitAttempt({
 			quizId: params.id,

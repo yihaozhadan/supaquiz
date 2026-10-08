@@ -38,7 +38,8 @@
 		Settings,
 		FileInput,
 		GripVertical,
-		Pencil
+		Pencil,
+		Eye
 	} from 'lucide-svelte';
 
 	let { data, form } = $props();
@@ -234,6 +235,10 @@
 </script>
 
 <PageHeader title="Edit Quiz" description={quiz.title}>
+	<Button href="/quiz/{quiz.id}?preview=1" target="_blank" variant="outline" size="sm">
+		<Eye class="size-4" />
+		Preview
+	</Button>
 	<Button href="/admin/quizzes" variant="outline" size="sm">
 		<ArrowLeft class="size-4" />
 		Back

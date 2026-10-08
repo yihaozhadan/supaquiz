@@ -9,14 +9,27 @@ import {
 } from '$lib/server/quiz-attempts';
 import { normalizeQuestion } from '$lib/server/quiz-actions';
 import { getParticipantId } from '$lib/server/quiz-session';
+import { getPreviewAttempt } from '$lib/server/preview-store';
+import { verifySession } from '$lib/server/auth';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params, cookies }) => {
-	const attemptData = await getAttemptById(params.attemptId);
-	if (!attemptData || attemptData.quizId !== params.id) error(404, 'Attempt not found');
+	let attemptData = await getAttemptById(params.attemptId);
+	let isPreview = false;
 
-	const participantId = getParticipantId(cookies);
-	if (!participantId) error(401, 'Participant session required');
+	if (!attemptData || attemptData.quizId !== params.id) {
+		// Preview attempts live only in memory and are visible to admins.
+		const previewAttempt = getPreviewAttempt(params.attemptId);
+		if (
+			previewAttempt &&
+			previewAttempt.quizId === params.id &&
+			Boolean(await verifySession(cookies))
+		) {
+			attemptData = previewAttempt;
+			isPreview = true;
+		}
+	}
+	if (!attemptData || attemptData.quizId !== params.id) error(404, 'Attempt not found');
 
 	const quizData = await db.query.quiz.findFirst({ where: eq(quiz.id, params.id) });
 	if (!quizData) error(404, 'Quiz not found');
@@ -36,14 +49,19 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 	const intakeFormSchema = safeParse<IntakeFormField[]>(quizData.intakeFormSchema) ?? [];
 	const intakeFormData = safeParse<Record<string, unknown>>(attemptData.intakeFormData) ?? {};
 
-	const expectedParticipantKey = resolveParticipantKey(
-		intakeFormSchema,
-		intakeFormData,
-		participantId
-	);
+	if (!isPreview) {
+		const participantId = getParticipantId(cookies);
+		if (!participantId) error(401, 'Participant session required');
 
-	if (expectedParticipantKey !== attemptData.participantKey) {
-		error(403, 'You are not authorized to view this attempt');
+		const expectedParticipantKey = resolveParticipantKey(
+			intakeFormSchema,
+			intakeFormData,
+			participantId
+		);
+
+		if (expectedParticipantKey !== attemptData.participantKey) {
+			error(403, 'You are not authorized to view this attempt');
+		}
 	}
 
 	const revealAnswers = quizData.revealAnswersAfter === 'immediate';
@@ -81,7 +99,9 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 			: 0;
 
 	return {
+		quizId: quizData.id,
 		quizTitle: quizData.title,
+		isPreview,
 		attempt: {
 			score: attemptData.score,
 			totalQuestions: attemptData.totalQuestions,

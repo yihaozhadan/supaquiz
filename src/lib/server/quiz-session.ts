@@ -56,6 +56,8 @@ export interface QuizSessionPayload {
 	intakeFormData: Record<string, unknown>;
 	questionOrder: string[];
 	startedAt: number;
+	/** When true, the session is an admin preview: submissions are graded but never persisted. */
+	preview?: boolean;
 }
 
 /**
