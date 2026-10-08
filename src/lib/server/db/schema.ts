@@ -36,7 +36,7 @@ export const quiz = sqliteTable('quiz', {
 		.notNull()
 		.default('immediate'),
 	intakeFormSchema: text('intake_form_schema', { mode: 'json' }).notNull(),
-	status: text('status', { enum: ['draft', 'active', 'expired'] })
+	status: text('status', { enum: ['draft', 'scheduled', 'active', 'expired', 'archived'] })
 		.notNull()
 		.default('draft'),
 	isPublic: integer('is_public', { mode: 'boolean' }).notNull().default(true),

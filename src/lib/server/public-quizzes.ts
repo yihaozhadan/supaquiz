@@ -1,6 +1,25 @@
-import { and, asc, count, desc, eq, inArray, or, sql, type SQL } from 'drizzle-orm';
+import {
+	and,
+	asc,
+	count,
+	desc,
+	eq,
+	gt,
+	inArray,
+	isNotNull,
+	isNull,
+	lte,
+	or,
+	sql,
+	type SQL
+} from 'drizzle-orm';
 import { db } from './db';
 import { attempt, question, quiz } from './db/schema';
+import {
+	getEffectiveStatus,
+	type EffectiveQuizStatus,
+	type StoredQuizStatus
+} from '$lib/quiz-status';
 
 export interface PublicQuizSummary {
 	id: string;
@@ -10,7 +29,7 @@ export interface PublicQuizSummary {
 	timeLimitSeconds: number | null;
 	attemptCount: number;
 	isPasswordProtected: boolean;
-	status: 'draft' | 'active' | 'expired';
+	status: EffectiveQuizStatus;
 	activateAt: Date | null;
 	expireAt: Date | null;
 	createdAt: Date;
@@ -29,7 +48,7 @@ function buildSummary(row: {
 	description: string;
 	timeLimitSeconds: number | null;
 	password: string | null;
-	status: 'draft' | 'active' | 'expired';
+	status: StoredQuizStatus;
 	activateAt: Date | null;
 	expireAt: Date | null;
 	createdAt: Date;
@@ -44,7 +63,7 @@ function buildSummary(row: {
 		timeLimitSeconds: row.timeLimitSeconds,
 		attemptCount: row.attemptCount,
 		isPasswordProtected: Boolean(row.password),
-		status: row.status,
+		status: getEffectiveStatus(row),
 		activateAt: row.activateAt,
 		expireAt: row.expireAt,
 		createdAt: row.createdAt
@@ -52,18 +71,35 @@ function buildSummary(row: {
 }
 
 /**
+ * SQL conditions mirroring getEffectiveStatus so public listings only expose
+ * quizzes that are effectively `active` or `expired` (when the quiz allows
+ * post-expiry visibility). Scheduled/draft/archived quizzes stay hidden.
+ */
+function visibilityConditions(now: Date) {
+	const published = inArray(quiz.status, ['active', 'scheduled']);
+	const activeCond = and(
+		published,
+		or(isNull(quiz.activateAt), lte(quiz.activateAt, now)),
+		or(isNull(quiz.expireAt), gt(quiz.expireAt, now))
+	);
+	const expiredCond = and(
+		eq(quiz.isVisibleAfterExpiry, true),
+		or(
+			eq(quiz.status, 'expired'),
+			and(published, isNotNull(quiz.expireAt), lte(quiz.expireAt, now))
+		)
+	);
+	return { activeCond, expiredCond };
+}
+
+/**
  * Fetch active, public quizzes for display on the homepage.
  * Attaches question and attempt counts computed via separate aggregate queries.
  */
 export async function getPublicQuizzes(limit?: number): Promise<PublicQuizSummary[]> {
+	const { activeCond, expiredCond } = visibilityConditions(new Date());
 	const quizzes = await db.query.quiz.findMany({
-		where: and(
-			eq(quiz.isPublic, true),
-			or(
-				eq(quiz.status, 'active'),
-				and(eq(quiz.status, 'expired'), eq(quiz.isVisibleAfterExpiry, true))
-			)
-		),
+		where: and(eq(quiz.isPublic, true), or(activeCond, expiredCond)),
 		orderBy: [desc(quiz.createdAt)],
 		limit
 	});
@@ -126,19 +162,13 @@ export async function getPublicQuizzesPaged(options: {
 	const offset = Math.max(0, page - 1) * pageSize;
 
 	const filters: SQL<unknown>[] = [eq(quiz.isPublic, true)];
+	const { activeCond, expiredCond } = visibilityConditions(new Date());
 	if (status === 'active') {
-		filters.push(eq(quiz.status, 'active'));
+		filters.push(activeCond as SQL<unknown>);
 	} else if (status === 'expired') {
-		filters.push(
-			and(eq(quiz.status, 'expired'), eq(quiz.isVisibleAfterExpiry, true)) as SQL<unknown>
-		);
+		filters.push(expiredCond as SQL<unknown>);
 	} else if (status === 'all') {
-		filters.push(
-			or(
-				eq(quiz.status, 'active'),
-				and(eq(quiz.status, 'expired'), eq(quiz.isVisibleAfterExpiry, true)) as SQL<unknown>
-			) as SQL<unknown>
-		);
+		filters.push(or(activeCond, expiredCond) as SQL<unknown>);
 	}
 
 	if (query?.trim()) {

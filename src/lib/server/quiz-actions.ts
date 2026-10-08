@@ -9,6 +9,7 @@ import {
 	questionUpdateSchema
 } from './validations';
 import { saveQuestionMedia, deleteQuestionMedia } from './storage';
+import { getEffectiveStatus, validateSchedule } from '$lib/quiz-status';
 
 /**
  * Normalize the correctAnswer form field into the shape expected by the
@@ -123,6 +124,7 @@ export async function getQuizzes() {
 
 	return quizzes.map((q) => ({
 		...q,
+		effectiveStatus: getEffectiveStatus(q),
 		questionCount: questionCountMap.get(q.id) ?? 0,
 		attemptCount: 0,
 		activeParticipantCount: 0
@@ -171,7 +173,9 @@ export async function createQuiz(formData: FormData) {
 					? undefined
 					: false,
 		questionDisplayMode: data.questionDisplayMode || 'one_at_a_time',
-		intakeFormSchema: data.intakeFormSchema ? JSON.parse(data.intakeFormSchema as string) : []
+		intakeFormSchema: data.intakeFormSchema ? JSON.parse(data.intakeFormSchema as string) : [],
+		activateAt: data.activateAt ? new Date(data.activateAt as string) : null,
+		expireAt: data.expireAt ? new Date(data.expireAt as string) : null
 	};
 
 	console.log('Quiz creation data:', JSON.stringify(processedData, null, 2));
@@ -181,6 +185,11 @@ export async function createQuiz(formData: FormData) {
 	if (!parsed.success) {
 		console.log('Validation errors:', JSON.stringify(parsed.error.flatten(), null, 2));
 		return { success: false, error: 'Invalid data' };
+	}
+
+	const scheduleError = validateSchedule(parsed.data.activateAt, parsed.data.expireAt);
+	if (scheduleError) {
+		return { success: false, error: scheduleError };
 	}
 
 	const newQuiz = await db.insert(quiz).values(parsed.data).returning();
@@ -215,8 +224,19 @@ export async function updateQuiz(formData: FormData) {
 		intakeFormSchema: data.intakeFormSchema
 			? JSON.parse(data.intakeFormSchema as string)
 			: undefined,
-		activateAt: data.activateAt ? new Date(data.activateAt as string) : undefined,
-		expireAt: data.expireAt ? new Date(data.expireAt as string) : undefined
+		// An empty field clears the date; an absent key leaves it unchanged.
+		activateAt:
+			data.activateAt === undefined
+				? undefined
+				: data.activateAt
+					? new Date(data.activateAt as string)
+					: null,
+		expireAt:
+			data.expireAt === undefined
+				? undefined
+				: data.expireAt
+					? new Date(data.expireAt as string)
+					: null
 	};
 
 	const parsed = quizUpdateSchema.safeParse(processedData);
@@ -226,6 +246,22 @@ export async function updateQuiz(formData: FormData) {
 	}
 
 	const { id, ...updateData } = parsed.data;
+
+	// Validate the activation window against the merged result so a partial
+	// update (e.g. only expireAt submitted) is checked against stored values.
+	if (updateData.activateAt !== undefined || updateData.expireAt !== undefined) {
+		const current = await db.query.quiz.findFirst({
+			where: eq(quiz.id, id),
+			columns: { activateAt: true, expireAt: true }
+		});
+		const scheduleError = validateSchedule(
+			updateData.activateAt !== undefined ? updateData.activateAt : (current?.activateAt ?? null),
+			updateData.expireAt !== undefined ? updateData.expireAt : (current?.expireAt ?? null)
+		);
+		if (scheduleError) {
+			return { success: false, error: scheduleError };
+		}
+	}
 
 	const updatedQuiz = await db
 		.update(quiz)

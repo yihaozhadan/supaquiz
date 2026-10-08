@@ -101,6 +101,8 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 			questionCount: quizData.questionCount,
 			timeLimitSeconds: quizData.timeLimitSeconds,
 			maxAttempts: quizData.maxAttempts,
+			activateAt: quizData.activateAt,
+			expireAt: quizData.expireAt,
 			intakeFormSchema: safeParse<IntakeFormField[]>(quizData.intakeFormSchema) ?? []
 		},
 		availability,

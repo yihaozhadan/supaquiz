@@ -18,11 +18,11 @@ export const quizCreateSchema = z.object({
 	questionDisplayMode: z.enum(['one_at_a_time', 'all_on_one_page']).default('one_at_a_time'),
 	revealAnswersAfter: z.enum(['immediate', 'never']).default('immediate'),
 	intakeFormSchema: z.array(intakeFormFieldSchema).default([]),
-	status: z.enum(['draft', 'active', 'expired']).default('draft'),
+	status: z.enum(['draft', 'scheduled', 'active', 'expired', 'archived']).default('draft'),
 	isPublic: z.boolean().default(true),
 	isVisibleAfterExpiry: z.boolean().default(true),
-	activateAt: z.coerce.date().optional(),
-	expireAt: z.coerce.date().optional()
+	activateAt: z.coerce.date().nullable().optional(),
+	expireAt: z.coerce.date().nullable().optional()
 });
 
 export const quizUpdateSchema = quizCreateSchema.partial().extend({
@@ -62,7 +62,7 @@ export const questionUpdateSchema = questionCreateSchema.partial().extend({
 
 export const quizStatusToggleSchema = z.object({
 	id: z.uuid(),
-	status: z.enum(['draft', 'active', 'expired'])
+	status: z.enum(['draft', 'active', 'archived'])
 });
 
 export const quizExportQuestionSchema = z.object({

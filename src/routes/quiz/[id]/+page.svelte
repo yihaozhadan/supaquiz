@@ -24,6 +24,14 @@
 		inactive: 'This quiz is not currently active.'
 	};
 
+	const blockedMessage = $derived.by(() => {
+		if (data.availability.available) return null;
+		if (data.availability.reason === 'not_started' && data.quiz.activateAt) {
+			return `This quiz is scheduled to open on ${new Date(data.quiz.activateAt).toLocaleString()}.`;
+		}
+		return blockedMessages[data.availability.reason] ?? 'This quiz is not available.';
+	});
+
 	const passwordVerified = $derived(data.passwordVerified || form?.passwordOk === true);
 
 	const trueFalseOptions = [
@@ -74,7 +82,7 @@
 				</div>
 				<CardTitle>{data.quiz.title}</CardTitle>
 				<CardDescription>
-					{blockedMessages[data.availability.reason] ?? 'This quiz is not available.'}
+					{blockedMessage}
 				</CardDescription>
 			</CardHeader>
 		</Card>
