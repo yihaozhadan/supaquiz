@@ -198,18 +198,24 @@
 		questionTree = tree;
 	}
 
-	// Chevron buttons move a question one visible slot up/down, adopting the
-	// group membership of the slot it lands in.
+	// Chevron buttons move a question one visible slot up/down within its own
+	// container — group members stay in their group, ungrouped questions at root.
 	function moveQuestionInTree(id: string, direction: 'up' | 'down') {
 		const index = flatIndexById[id];
 		if (index == null) return;
 		const target = flatQuestionSlots[direction === 'up' ? index - 1 : index + 1];
-		if (!target) return;
+		const src = flatQuestionSlots[index];
+		if (!target || !src || (src.memberIndex == null) !== (target.memberIndex == null)) return;
+		const offset = direction === 'down' ? 1 : 0;
 		moveQuestionTo(
 			id,
 			target.memberIndex == null
-				? { kind: 'root', index: target.itemIndex }
-				: { kind: 'group', itemIndex: target.itemIndex, memberIndex: target.memberIndex }
+				? { kind: 'root', index: target.itemIndex + offset }
+				: {
+						kind: 'group',
+						itemIndex: target.itemIndex,
+						memberIndex: target.memberIndex + offset
+					}
 		);
 		persistQuestionOrder();
 	}
@@ -719,7 +725,7 @@
 									<div class="pointer-events-none h-0.5 rounded-full bg-primary"></div>
 								{/if}
 								{#if item.type === 'question'}
-									{@render questionRow(item.question, i, null)}
+									{@render questionRow(item.question, i, null, null)}
 								{:else}
 									{@render groupSection(item, i)}
 								{/if}
@@ -1252,8 +1258,19 @@
 	</div>
 </form>
 
-{#snippet questionRow(q: QuizQuestion, itemIndex: number, memberIndex: number | null)}
+{#snippet questionRow(
+	q: QuizQuestion,
+	itemIndex: number,
+	memberIndex: number | null,
+	groupSize: number | null
+)}
 	{@const flatIndex = flatIndexById[q.id] ?? 0}
+	{@const prevSlot = flatQuestionSlots[flatIndex - 1]}
+	{@const nextSlot = flatQuestionSlots[flatIndex + 1]}
+	{@const canMoveUp =
+		memberIndex == null ? prevSlot?.memberIndex === null : memberIndex > 0}
+	{@const canMoveDown =
+		memberIndex == null ? nextSlot?.memberIndex === null : memberIndex < (groupSize ?? 0) - 1}
 	<div
 		role="listitem"
 		draggable="true"
@@ -1270,7 +1287,7 @@
 		<div class="flex flex-col gap-1">
 			<button
 				type="button"
-				disabled={flatIndex === 0}
+				disabled={!canMoveUp}
 				onclick={() => moveQuestionInTree(q.id, 'up')}
 				class="text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
 			>
@@ -1279,7 +1296,7 @@
 			</button>
 			<button
 				type="button"
-				disabled={flatIndex === flatQuestionSlots.length - 1}
+				disabled={!canMoveDown}
 				onclick={() => moveQuestionInTree(q.id, 'down')}
 				class="text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
 			>
@@ -1363,7 +1380,7 @@
 					{#if isGroupDropAt(itemIndex, j)}
 						<div class="pointer-events-none h-0.5 rounded-full bg-primary"></div>
 					{/if}
-					{@render questionRow(q, itemIndex, j)}
+					{@render questionRow(q, itemIndex, j, item.questions.length)}
 				{/each}
 				{#if count > 0 && isGroupDropAt(itemIndex, count)}
 					<div class="pointer-events-none h-0.5 rounded-full bg-primary"></div>
