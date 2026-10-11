@@ -10,6 +10,7 @@ A lightweight, self-hostable open-source quiz platform. Create, publish, and tak
 - Optional password protection per quiz
 - Custom participant intake forms (text, email, number, and select fields)
 - Question shuffling and randomization
+- Question groups (sections) with optional per-group random sampling per attempt
 - Time limits and attempt restrictions (per participant, identified by email or browser fingerprint)
 - Participant limits per quiz
 - Scheduling with activation/expiration dates, evaluated lazily on each request
@@ -20,7 +21,7 @@ A lightweight, self-hostable open-source quiz platform. Create, publish, and tak
 - Answer reveal settings (immediate or never)
 - Public or private listing, with optional visibility after expiry
 - Duplicate a quiz with all of its questions
-- Up to 50 questions per quiz; up to 5 active quizzes at a time
+- Up to 500 questions per quiz; up to 5 active quizzes at a time
 
 ### Admin Dashboard
 

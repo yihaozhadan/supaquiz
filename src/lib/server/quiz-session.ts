@@ -54,7 +54,14 @@ export interface QuizSessionPayload {
 	quizId: string;
 	participantKey: string;
 	intakeFormData: Record<string, unknown>;
-	questionOrder: string[];
+	/**
+	 * Identifies the served question order in the server-side session
+	 * questions store. Keeping the order out of the JWT avoids the ~4KB
+	 * cookie limit for large question pools.
+	 */
+	sessionId?: string;
+	/** Legacy sessions carry the order inline; new sessions use sessionId. */
+	questionOrder?: string[];
 	startedAt: number;
 	/** When true, the session is an admin preview: submissions are graded but never persisted. */
 	preview?: boolean;

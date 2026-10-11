@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MAX_QUESTIONS_PER_QUIZ, MAX_QUESTION_GROUPS_PER_QUIZ } from '$lib/constants';
 
 export const intakeFormFieldSchema = z.object({
 	name: z.string().min(1).max(100),
@@ -12,6 +13,7 @@ export const quizCreateSchema = z.object({
 	password: z.string().min(0).max(100).optional(),
 	timeLimitSeconds: z.number().int().min(0).optional(),
 	shuffleQuestions: z.boolean().default(false),
+	questionsPerAttempt: z.number().int().min(1).nullable().default(null),
 	maxAttempts: z.number().int().min(1).nullable().default(1),
 	maxParticipants: z.number().int().min(1).nullable().default(null),
 	allowBackNavigation: z.boolean().default(true),
@@ -35,8 +37,22 @@ export const questionOptionSchema = z.object({
 	isCorrect: z.boolean()
 });
 
+export const questionGroupCreateSchema = z.object({
+	quizId: z.uuid(),
+	name: z.string().min(1).max(100),
+	/** Random questions sampled from this group per attempt; null = all. */
+	pickCount: z.number().int().min(1).nullable().default(null)
+});
+
+export const questionGroupUpdateSchema = z.object({
+	id: z.uuid(),
+	name: z.string().min(1).max(100),
+	pickCount: z.number().int().min(1).nullable().default(null)
+});
+
 export const questionCreateSchema = z.object({
 	quizId: z.uuid(),
+	groupId: z.uuid().nullable().optional(),
 	type: z.enum(['mcq_single', 'mcq_multi', 'true_false', 'fitb']),
 	text: z.string().min(1).max(2000),
 	mediaUrl: z
@@ -73,7 +89,14 @@ export const quizExportQuestionSchema = z.object({
 	correctAnswer: z.union([z.string(), z.array(z.string())]),
 	explanation: z.string().max(2000).nullable().optional(),
 	codeSnippet: z.string().max(10000).nullable().optional(),
-	orderIndex: z.number().int().min(0)
+	orderIndex: z.number().int().min(0),
+	groupName: z.string().max(100).nullable().optional()
+});
+
+export const quizExportGroupSchema = z.object({
+	name: z.string().min(1).max(100),
+	pickCount: z.number().int().min(1).nullable().optional(),
+	orderIndex: z.number().int().min(0).default(0)
 });
 
 export const quizExportSchema = z.object({
@@ -84,6 +107,7 @@ export const quizExportSchema = z.object({
 		password: z.string().nullable().optional(),
 		timeLimitSeconds: z.number().int().min(0).nullable().optional(),
 		shuffleQuestions: z.boolean().default(false),
+		questionsPerAttempt: z.number().int().min(1).nullable().default(null),
 		maxAttempts: z.number().int().min(1).nullable().default(1),
 		maxParticipants: z.number().int().min(1).nullable().default(null),
 		allowBackNavigation: z.boolean().default(true),
@@ -93,5 +117,6 @@ export const quizExportSchema = z.object({
 		isPublic: z.boolean().default(true),
 		isVisibleAfterExpiry: z.boolean().default(true)
 	}),
-	questions: z.array(quizExportQuestionSchema).max(50)
+	questions: z.array(quizExportQuestionSchema).max(MAX_QUESTIONS_PER_QUIZ),
+	groups: z.array(quizExportGroupSchema).max(MAX_QUESTION_GROUPS_PER_QUIZ).optional()
 });

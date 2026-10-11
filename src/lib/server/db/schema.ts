@@ -20,6 +20,7 @@ export const quiz = sqliteTable('quiz', {
 	password: text('password'),
 	timeLimitSeconds: integer('time_limit_seconds'),
 	shuffleQuestions: integer('shuffle_questions', { mode: 'boolean' }).notNull().default(false),
+	questionsPerAttempt: integer('questions_per_attempt'),
 	maxAttempts: integer('max_attempts').default(1),
 	maxParticipants: integer('max_participants'),
 	allowBackNavigation: integer('allow_back_navigation', { mode: 'boolean' })
@@ -53,6 +54,19 @@ export const quiz = sqliteTable('quiz', {
 		.$defaultFn(() => new Date())
 });
 
+export const questionGroup = sqliteTable('question_group', {
+	id: text('id')
+		.primaryKey()
+		.$defaultFn(() => crypto.randomUUID()),
+	quizId: text('quiz_id')
+		.notNull()
+		.references(() => quiz.id, { onDelete: 'cascade' }),
+	name: text('name').notNull(),
+	/** Random questions sampled from this group per attempt. Null = serve all. */
+	pickCount: integer('pick_count'),
+	orderIndex: integer('order_index').notNull().default(0)
+});
+
 export const question = sqliteTable('question', {
 	id: text('id')
 		.primaryKey()
@@ -60,6 +74,8 @@ export const question = sqliteTable('question', {
 	quizId: text('quiz_id')
 		.notNull()
 		.references(() => quiz.id, { onDelete: 'cascade' }),
+	/** Null = ungrouped question, always served. */
+	groupId: text('group_id').references(() => questionGroup.id, { onDelete: 'set null' }),
 	type: text('type', {
 		enum: ['mcq_single', 'mcq_multi', 'true_false', 'fitb']
 	}).notNull(),
@@ -81,6 +97,8 @@ export const attempt = sqliteTable('attempt', {
 		.references(() => quiz.id, { onDelete: 'cascade' }),
 	participantKey: text('participant_key').notNull(),
 	intakeFormData: text('intake_form_data', { mode: 'json' }).notNull(),
+	/** The question ids served in this attempt, in the order they were shown. Null for legacy attempts = all quiz questions. */
+	questionIds: text('question_ids', { mode: 'json' }).$type<string[]>(),
 	answers: text('answers', { mode: 'json' }).notNull(),
 	score: integer('score').notNull(),
 	totalQuestions: integer('total_questions').notNull(),

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { flushSync } from 'svelte';
+	import { SvelteSet } from 'svelte/reactivity';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	import { beforeNavigate } from '$app/navigation';
@@ -25,6 +26,7 @@
 	import QuestionEditorSheet from '$lib/components/admin/QuestionEditorSheet.svelte';
 	import { toasts } from '$lib/components/admin/toast';
 	import { getEffectiveStatus, validateSchedule, QUIZ_STATUS_LABELS } from '$lib/quiz-status';
+	import { MAX_QUESTIONS_PER_QUIZ, MAX_QUESTION_GROUPS_PER_QUIZ } from '$lib/constants';
 	import {
 		ArrowLeft,
 		Plus,
@@ -40,7 +42,10 @@
 		FileInput,
 		GripVertical,
 		Pencil,
-		Eye
+		Eye,
+		ChevronRight,
+		Folder,
+		FolderOpen
 	} from 'lucide-svelte';
 
 	let { data, form } = $props();
@@ -63,6 +68,251 @@
 
 	const quiz = $derived(data.quiz);
 
+	const groupQuestionCounts = $derived.by(() => {
+		const counts: Record<string, number> = {};
+		for (const q of quiz.questions) {
+			if (q.groupId) counts[q.groupId] = (counts[q.groupId] ?? 0) + 1;
+		}
+		return counts;
+	});
+
+	type QuizQuestion = (typeof quiz.questions)[number];
+	type QuizGroup = NonNullable<typeof quiz.groups>[number];
+	type TreeItem =
+		| { type: 'group'; group: QuizGroup; questions: QuizQuestion[] }
+		| { type: 'question'; question: QuizQuestion };
+
+	// File-explorer style tree: a group renders where its first member sits in
+	// the flat question order; empty groups collect at the end so they stay
+	// reachable as drop targets.
+	function buildQuestionTree(questions: QuizQuestion[], groups: QuizGroup[]): TreeItem[] {
+		const items: TreeItem[] = [];
+		const groupById = Object.fromEntries(groups.map((g) => [g.id, g]));
+		const itemByGroupId: Record<string, Extract<TreeItem, { type: 'group' }>> = {};
+		for (const q of questions) {
+			const group = q.groupId ? groupById[q.groupId] : undefined;
+			if (!group) {
+				items.push({ type: 'question', question: q });
+				continue;
+			}
+			let item = itemByGroupId[group.id];
+			if (!item) {
+				item = { type: 'group', group, questions: [] };
+				itemByGroupId[group.id] = item;
+				items.push(item);
+			}
+			item.questions.push(q);
+		}
+		for (const g of groups) {
+			if (!itemByGroupId[g.id]) items.push({ type: 'group', group: g, questions: [] });
+		}
+		return items;
+	}
+
+	// Writable derived: the tree recomputes when server data reloads, but local
+	// reassignment (drag-and-drop) overrides it until the next reload.
+	let questionTree = $derived.by(() => buildQuestionTree(quiz.questions, quiz.groups ?? []));
+
+	// Every visible question slot, top to bottom, ignoring group headers.
+	const flatQuestionSlots = $derived.by(() => {
+		const slots: { id: string; itemIndex: number; memberIndex: number | null }[] = [];
+		questionTree.forEach((item, i) => {
+			if (item.type === 'question') {
+				slots.push({ id: item.question.id, itemIndex: i, memberIndex: null });
+			} else {
+				item.questions.forEach((q, j) => slots.push({ id: q.id, itemIndex: i, memberIndex: j }));
+			}
+		});
+		return slots;
+	});
+	const flatIndexById = $derived<Record<string, number>>(
+		Object.fromEntries(flatQuestionSlots.map((s, i) => [s.id, i]))
+	);
+
+	const collapsedGroups = new SvelteSet<string>();
+
+	function toggleGroupCollapsed(groupId: string) {
+		if (collapsedGroups.has(groupId)) collapsedGroups.delete(groupId);
+		else collapsedGroups.add(groupId);
+	}
+
+	type DropLocation =
+		{ kind: 'root'; index: number } | { kind: 'group'; itemIndex: number; memberIndex: number };
+
+	let draggingQuestionId = $state<string | null>(null);
+	let dropLocation = $state<DropLocation | null>(null);
+	let questionTreeEl = $state<HTMLDivElement | null>(null);
+
+	function locateQuestion(id: string): { itemIndex: number; memberIndex: number | null } | null {
+		for (let i = 0; i < questionTree.length; i++) {
+			const item = questionTree[i];
+			if (item.type === 'question') {
+				if (item.question.id === id) return { itemIndex: i, memberIndex: null };
+			} else {
+				const memberIndex = item.questions.findIndex((q) => q.id === id);
+				if (memberIndex !== -1) return { itemIndex: i, memberIndex };
+			}
+		}
+		return null;
+	}
+
+	// Moves a question to a drop location in the tree. A root location inserts
+	// an ungrouped entry; a group location inserts among that group's members.
+	function moveQuestionTo(id: string, loc: DropLocation) {
+		const src = locateQuestion(id);
+		if (!src) return;
+
+		// Clone the tree shallowly so reassignment is the only state update.
+		const tree = questionTree.map((item) =>
+			item.type === 'group' ? { ...item, questions: [...item.questions] } : { ...item }
+		);
+
+		let moved: QuizQuestion;
+		if (src.memberIndex == null) {
+			const item = tree[src.itemIndex];
+			if (item.type !== 'question') return;
+			moved = item.question;
+			tree.splice(src.itemIndex, 1);
+		} else {
+			const item = tree[src.itemIndex];
+			if (item.type !== 'group') return;
+			moved = item.questions.splice(src.memberIndex, 1)[0];
+		}
+
+		if (loc.kind === 'root') {
+			let index = loc.index;
+			if (src.memberIndex == null && src.itemIndex < index) index--;
+			tree.splice(index, 0, { type: 'question', question: moved });
+		} else {
+			let itemIndex = loc.itemIndex;
+			if (src.memberIndex == null && src.itemIndex < itemIndex) itemIndex--;
+			const target = tree[itemIndex];
+			if (!target || target.type !== 'group') return;
+			let memberIndex = loc.memberIndex;
+			if (src.memberIndex != null && src.itemIndex === itemIndex && src.memberIndex < memberIndex) {
+				memberIndex--;
+			}
+			target.questions.splice(memberIndex, 0, moved);
+		}
+
+		questionTree = tree;
+	}
+
+	// Chevron buttons move a question one visible slot up/down within its own
+	// container — group members stay in their group, ungrouped questions at root.
+	function moveQuestionInTree(id: string, direction: 'up' | 'down') {
+		const index = flatIndexById[id];
+		if (index == null) return;
+		const target = flatQuestionSlots[direction === 'up' ? index - 1 : index + 1];
+		const src = flatQuestionSlots[index];
+		if (!target || !src || (src.memberIndex == null) !== (target.memberIndex == null)) return;
+		const offset = direction === 'down' ? 1 : 0;
+		moveQuestionTo(
+			id,
+			target.memberIndex == null
+				? { kind: 'root', index: target.itemIndex + offset }
+				: {
+						kind: 'group',
+						itemIndex: target.itemIndex,
+						memberIndex: target.memberIndex + offset
+					}
+		);
+		persistQuestionOrder();
+	}
+
+	let persistOrderChain: Promise<void> = Promise.resolve();
+
+	// Serializes order writes so rapid drags can't interleave server-side.
+	function persistQuestionOrder() {
+		const payload: { id: string; groupId: string | null }[] = [];
+		for (const item of questionTree) {
+			if (item.type === 'question') {
+				payload.push({ id: item.question.id, groupId: null });
+			} else {
+				for (const q of item.questions) payload.push({ id: q.id, groupId: item.group.id });
+			}
+		}
+		persistOrderChain = persistOrderChain.then(() => sendQuestionOrder(payload));
+	}
+
+	async function sendQuestionOrder(payload: { id: string; groupId: string | null }[]) {
+		try {
+			const body = new FormData();
+			body.set('quizId', quiz.id);
+			body.set('items', JSON.stringify(payload));
+			const res = await fetch('?/reorderQuestions', {
+				method: 'POST',
+				headers: { 'x-sveltekit-action': 'true' },
+				body
+			});
+			const result = await res.json().catch(() => null);
+			if (!res.ok || result?.type === 'failure') {
+				toasts.error(result?.data?.error ?? 'Failed to save question order');
+			}
+			await invalidateAll();
+		} catch {
+			toasts.error('Failed to save question order');
+		}
+	}
+
+	function handleQuestionDragStart(e: DragEvent, id: string) {
+		e.dataTransfer?.setData('text/plain', id);
+		if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+		draggingQuestionId = id;
+	}
+
+	function handleQuestionDragOver(e: DragEvent, itemIndex: number, memberIndex: number | null) {
+		e.preventDefault();
+		e.stopPropagation();
+		if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+		const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+		const before = e.clientY < rect.top + rect.height / 2;
+		if (memberIndex == null) {
+			dropLocation = { kind: 'root', index: itemIndex + (before ? 0 : 1) };
+		} else {
+			dropLocation = { kind: 'group', itemIndex, memberIndex: memberIndex + (before ? 0 : 1) };
+		}
+	}
+
+	function handleGroupDragOver(e: DragEvent, itemIndex: number, memberCount: number) {
+		e.preventDefault();
+		if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+		dropLocation = { kind: 'group', itemIndex, memberIndex: memberCount };
+	}
+
+	function handleEdgeDragOver(e: DragEvent, index: number) {
+		e.preventDefault();
+		if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+		dropLocation = { kind: 'root', index };
+	}
+
+	function handleQuestionDrop(e: DragEvent) {
+		e.preventDefault();
+		e.stopPropagation();
+		const id = e.dataTransfer?.getData('text/plain') ?? draggingQuestionId;
+		if (id && dropLocation) {
+			moveQuestionTo(id, dropLocation);
+			persistQuestionOrder();
+		}
+		clearDragState();
+	}
+
+	function handleTreeDragLeave(e: DragEvent) {
+		if (!questionTreeEl?.contains(e.relatedTarget as Node)) dropLocation = null;
+	}
+
+	function clearDragState() {
+		draggingQuestionId = null;
+		dropLocation = null;
+	}
+
+	const isRootDropAt = (index: number) =>
+		dropLocation?.kind === 'root' && dropLocation.index === index;
+	const isGroupDropAt = (itemIndex: number, memberIndex: number) =>
+		dropLocation?.kind === 'group' &&
+		dropLocation.itemIndex === itemIndex &&
+		dropLocation.memberIndex === memberIndex;
+
 	let title = $state(quiz.title);
 	let description = $state(quiz.description);
 	let password = $state(quiz.password || '');
@@ -79,6 +329,7 @@
 	let maxAttempts = $state(quiz.maxAttempts?.toString() || '1');
 	let unlimitedAttempts = $state(quiz.maxAttempts == null);
 	let maxParticipants = $state(quiz.maxParticipants?.toString() || '');
+	let questionsPerAttempt = $state(quiz.questionsPerAttempt?.toString() || '');
 	let shuffleQuestions = $state(quiz.shuffleQuestions);
 	let allowBackNavigation = $state(quiz.allowBackNavigation);
 	let isVisibleAfterExpiry = $state(quiz.isVisibleAfterExpiry ?? true);
@@ -166,15 +417,28 @@
 	let questionToDelete = $state<{ id: string; text: string } | null>(null);
 
 	// Question editor sheet state
+	interface EditingQuestion {
+		id?: string;
+		type: QuizQuestion['type'];
+		text: string;
+		explanation: string;
+		codeSnippet: string;
+		mediaUrl: string | null;
+		options: { id: string; text: string; isCorrect: boolean }[];
+		correctAnswer?: string | string[];
+		orderIndex: number;
+		groupId: string | null;
+	}
+
 	let questionSheetOpen = $state(false);
-	let editingQuestion = $state<any>(null);
+	let editingQuestion = $state<EditingQuestion | null>(null);
 
 	function openAddQuestion() {
 		editingQuestion = null;
 		questionSheetOpen = true;
 	}
 
-	function openEditQuestion(q: any) {
+	function openEditQuestion(q: QuizQuestion) {
 		editingQuestion = {
 			id: q.id,
 			type: q.type,
@@ -183,14 +447,17 @@
 			codeSnippet: q.codeSnippet || '',
 			mediaUrl: q.mediaUrl || null,
 			options: q.options
-				? (Array.isArray(q.options) ? q.options : JSON.parse(q.options)).map((o: any) => ({
-						id: o.id || crypto.randomUUID(),
-						text: o.text,
-						isCorrect: o.isCorrect
-					}))
+				? (Array.isArray(q.options) ? q.options : JSON.parse(q.options as string)).map(
+						(o: { id?: string; text: string; isCorrect: boolean }) => ({
+							id: o.id || crypto.randomUUID(),
+							text: o.text,
+							isCorrect: o.isCorrect
+						})
+					)
 				: [],
-			correctAnswer: q.correctAnswer,
-			orderIndex: q.orderIndex
+			correctAnswer: q.correctAnswer as string | string[],
+			orderIndex: q.orderIndex,
+			groupId: q.groupId ?? null
 		};
 		questionSheetOpen = true;
 	}
@@ -419,7 +686,7 @@
 							<CardDescription>Add and reorder questions for this quiz.</CardDescription>
 						</div>
 						<Badge variant="secondary" class="font-mono">
-							{quiz.questions.length} / 50
+							{quiz.questions.length} / {MAX_QUESTIONS_PER_QUIZ}
 						</Badge>
 					</div>
 				</CardHeader>
@@ -436,92 +703,184 @@
 							</Button>
 						</EmptyState>
 					{:else}
-						<div class="space-y-3">
-							{#each quiz.questions as q, index (q.id)}
+						<div
+							class="space-y-2"
+							role="list"
+							bind:this={questionTreeEl}
+							ondragleave={handleTreeDragLeave}
+						>
+							{#if draggingQuestionId}
 								<div
-									class="flex items-start gap-3 rounded-lg border border-border bg-muted/30 p-4 transition-colors hover:bg-muted/50"
+									role="region"
+									aria-label="Move question to the top"
+									class="rounded-lg border border-dashed border-primary/50 bg-primary/5 px-3 py-1.5 text-center text-xs text-primary"
+									ondragover={(e) => handleEdgeDragOver(e, 0)}
+									ondrop={handleQuestionDrop}
 								>
-									<div class="flex flex-col gap-1">
-										<form
-											method="POST"
-											action="?/moveQuestion"
-											use:enhance={() => {
-												return async ({ update }) => {
-													await update();
-												};
-											}}
-										>
-											<input type="hidden" name="questionId" value={q.id} />
-											<input type="hidden" name="direction" value="up" />
-											<button
-												type="submit"
-												disabled={index === 0}
-												class="text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
-											>
-												<ChevronUp class="size-4" />
-											</button>
-										</form>
-										<form
-											method="POST"
-											action="?/moveQuestion"
-											use:enhance={() => {
-												return async ({ update }) => {
-													await update();
-												};
-											}}
-										>
-											<input type="hidden" name="questionId" value={q.id} />
-											<input type="hidden" name="direction" value="down" />
-											<button
-												type="submit"
-												disabled={index === quiz.questions.length - 1}
-												class="text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
-											>
-												<ChevronDown class="size-4" />
-											</button>
-										</form>
-									</div>
-
-									<div class="min-w-0 flex-1">
-										<div class="mb-1 flex items-center gap-2">
-											<span class="text-sm font-medium text-muted-foreground">Q{index + 1}</span>
-											<Badge variant={questionTypeConfig[q.type]?.variant || 'default'}>
-												{questionTypeConfig[q.type]?.label || q.type}
-											</Badge>
-											{#if q.mediaUrl}
-												<Badge variant="outline" class="text-xs">Media</Badge>
-											{/if}
-											{#if q.codeSnippet}
-												<Badge variant="outline" class="text-xs">Code</Badge>
-											{/if}
-										</div>
-										<p class="line-clamp-2 text-sm text-foreground">{q.text}</p>
-									</div>
-
-									<div class="flex shrink-0 items-center gap-1">
-										<Button variant="ghost" size="icon-sm" onclick={() => openEditQuestion(q)}>
-											<Pencil class="size-4" />
-											<span class="sr-only">Edit question</span>
-										</Button>
-										<Button variant="ghost" size="icon-sm" onclick={() => handleDeleteClick(q)}>
-											<Trash2 class="size-4 text-destructive" />
-											<span class="sr-only">Delete question</span>
-										</Button>
-									</div>
+									Drop here to move to the top
 								</div>
+							{/if}
+							{#each questionTree as item, i (item.type === 'group' ? `g-${item.group.id}` : item.question.id)}
+								{#if isRootDropAt(i)}
+									<div class="pointer-events-none h-0.5 rounded-full bg-primary"></div>
+								{/if}
+								{#if item.type === 'question'}
+									{@render questionRow(item.question, i, null, null)}
+								{:else}
+									{@render groupSection(item, i)}
+								{/if}
 							{/each}
+							{#if isRootDropAt(questionTree.length)}
+								<div class="pointer-events-none h-0.5 rounded-full bg-primary"></div>
+							{/if}
+							{#if draggingQuestionId}
+								<div
+									role="region"
+									aria-label="Ungroup question and move to the end"
+									class="rounded-lg border border-dashed border-primary/50 bg-primary/5 px-3 py-1.5 text-center text-xs text-primary"
+									ondragover={(e) => handleEdgeDragOver(e, questionTree.length)}
+									ondrop={handleQuestionDrop}
+								>
+									Drop here to ungroup / move to the end
+								</div>
+							{/if}
 						</div>
 						<Separator class="my-4" />
 						<Button
 							onclick={openAddQuestion}
 							variant="outline"
 							class="w-full"
-							disabled={quiz.questions.length >= 50}
+							disabled={quiz.questions.length >= MAX_QUESTIONS_PER_QUIZ}
 						>
 							<Plus class="size-4" />
 							Add Question
 						</Button>
 					{/if}
+				</CardContent>
+			</Card>
+
+			<!-- Question Groups Card -->
+			<Card class="mt-4">
+				<CardHeader>
+					<div class="flex items-center justify-between">
+						<div>
+							<CardTitle>Question Groups</CardTitle>
+							<CardDescription>
+								Organize questions into sections. Set a pick count to serve a random subset from a
+								group each attempt — ungrouped questions are always served.
+							</CardDescription>
+						</div>
+						<Badge variant="secondary" class="font-mono">
+							{quiz.groups?.length ?? 0} / {MAX_QUESTION_GROUPS_PER_QUIZ}
+						</Badge>
+					</div>
+				</CardHeader>
+				<CardContent class="space-y-3">
+					{#each quiz.groups ?? [] as group (group.id)}
+						<form
+							method="POST"
+							action="?/updateGroup"
+							use:enhance={() => {
+								return async ({ update }) => {
+									await update();
+								};
+							}}
+							class="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/30 p-3"
+						>
+							<input type="hidden" name="id" value={group.id} />
+							<Input
+								type="text"
+								name="name"
+								value={group.name}
+								required
+								class="min-w-40 flex-1"
+								aria-label="Group name"
+							/>
+							<div class="flex items-center gap-1.5">
+								<Input
+									type="number"
+									name="pickCount"
+									min="1"
+									max={groupQuestionCounts[group.id] ?? undefined}
+									value={group.pickCount ?? ''}
+									placeholder="All"
+									class="w-20"
+									aria-label="Questions picked per attempt"
+								/>
+								<span class="text-xs whitespace-nowrap text-muted-foreground">
+									of {groupQuestionCounts[group.id] ?? 0} picked
+								</span>
+							</div>
+							<div class="ml-auto flex items-center gap-1">
+								<Button type="submit" variant="ghost" size="sm">Save</Button>
+								<Button
+									type="submit"
+									formaction="?/deleteGroup"
+									variant="ghost"
+									size="icon-sm"
+									onclick={(e) => {
+										if (!confirm('Delete this group? Its questions will become ungrouped.')) {
+											e.preventDefault();
+										}
+									}}
+								>
+									<Trash2 class="size-4 text-destructive" />
+									<span class="sr-only">Delete group</span>
+								</Button>
+							</div>
+						</form>
+					{:else}
+						<p class="text-sm text-muted-foreground">
+							No groups yet. Create one to organize questions or serve random subsets.
+						</p>
+					{/each}
+					<Separator />
+					<form
+						method="POST"
+						action="?/createGroup"
+						use:enhance={() => {
+							return async ({ update }) => {
+								await update();
+							};
+						}}
+						class="flex flex-wrap items-center gap-2"
+					>
+						<input type="hidden" name="quizId" value={quiz.id} />
+						<Input
+							type="text"
+							name="name"
+							placeholder="New group name (e.g. Geography)"
+							required
+							class="min-w-40 flex-1"
+							aria-label="New group name"
+						/>
+						<Input
+							type="number"
+							name="pickCount"
+							min="1"
+							placeholder="Pick all"
+							class="w-28"
+							aria-label="Questions picked per attempt"
+						/>
+						<Button
+							type="submit"
+							variant="outline"
+							size="sm"
+							disabled={(quiz.groups?.length ?? 0) >= MAX_QUESTION_GROUPS_PER_QUIZ}
+						>
+							<Plus class="size-4" />
+							Add Group
+						</Button>
+					</form>
+					{#if (quiz.groups?.length ?? 0) >= MAX_QUESTION_GROUPS_PER_QUIZ}
+						<p class="text-xs text-muted-foreground">
+							Group limit reached — a quiz can have at most {MAX_QUESTION_GROUPS_PER_QUIZ} groups.
+						</p>
+					{/if}
+					<p class="text-xs text-muted-foreground">
+						Pick count: randomly serve that many of the group's questions per attempt. Leave empty
+						to serve every question in the group.
+					</p>
 				</CardContent>
 			</Card>
 		</Tabs.Content>
@@ -543,7 +902,7 @@
 						/>
 					{:else}
 						<div class="space-y-3">
-							{#each intakeFields as field, index}
+							{#each intakeFields as field, index (index)}
 								<div class="flex items-start gap-3 rounded-lg border border-border bg-muted/30 p-4">
 									<div class="flex flex-col gap-1">
 										<button
@@ -693,6 +1052,25 @@
 								placeholder="No limit"
 								oninput={markChanged}
 							/>
+						</div>
+						<div class="space-y-2">
+							<label for="questionsPerAttempt" class="text-sm font-medium text-foreground"
+								>Questions per Attempt</label
+							>
+							<Input
+								type="number"
+								name="questionsPerAttempt"
+								id="questionsPerAttempt"
+								bind:value={questionsPerAttempt}
+								min="1"
+								max={quiz.questions.length || undefined}
+								placeholder="All questions"
+								oninput={markChanged}
+							/>
+							<p class="text-xs text-muted-foreground">
+								Randomly select this many questions from the pool for each attempt. Leave empty to
+								serve all {quiz.questions.length || ''} questions.
+							</p>
 						</div>
 						<div class="space-y-2">
 							<label for="revealAnswersAfter" class="text-sm font-medium text-foreground"
@@ -880,6 +1258,143 @@
 	</div>
 </form>
 
+{#snippet questionRow(
+	q: QuizQuestion,
+	itemIndex: number,
+	memberIndex: number | null,
+	groupSize: number | null
+)}
+	{@const flatIndex = flatIndexById[q.id] ?? 0}
+	{@const prevSlot = flatQuestionSlots[flatIndex - 1]}
+	{@const nextSlot = flatQuestionSlots[flatIndex + 1]}
+	{@const canMoveUp =
+		memberIndex == null ? prevSlot?.memberIndex === null : memberIndex > 0}
+	{@const canMoveDown =
+		memberIndex == null ? nextSlot?.memberIndex === null : memberIndex < (groupSize ?? 0) - 1}
+	<div
+		role="listitem"
+		draggable="true"
+		ondragstart={(e) => handleQuestionDragStart(e, q.id)}
+		ondragover={(e) => handleQuestionDragOver(e, itemIndex, memberIndex)}
+		ondrop={handleQuestionDrop}
+		ondragend={clearDragState}
+		class="flex items-start gap-3 rounded-lg border border-border bg-muted/30 p-4 transition-colors hover:bg-muted/50 {draggingQuestionId ===
+		q.id
+			? 'opacity-40'
+			: ''}"
+	>
+		<GripVertical class="mt-0.5 size-4 shrink-0 cursor-grab text-muted-foreground" />
+		<div class="flex flex-col gap-1">
+			<button
+				type="button"
+				disabled={!canMoveUp}
+				onclick={() => moveQuestionInTree(q.id, 'up')}
+				class="text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
+			>
+				<ChevronUp class="size-4" />
+				<span class="sr-only">Move question up</span>
+			</button>
+			<button
+				type="button"
+				disabled={!canMoveDown}
+				onclick={() => moveQuestionInTree(q.id, 'down')}
+				class="text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
+			>
+				<ChevronDown class="size-4" />
+				<span class="sr-only">Move question down</span>
+			</button>
+		</div>
+
+		<div class="min-w-0 flex-1">
+			<div class="mb-1 flex items-center gap-2">
+				<span class="text-sm font-medium text-muted-foreground">Q{flatIndex + 1}</span>
+				<Badge variant={questionTypeConfig[q.type]?.variant || 'default'}>
+					{questionTypeConfig[q.type]?.label || q.type}
+				</Badge>
+				{#if q.mediaUrl}
+					<Badge variant="outline" class="text-xs">Media</Badge>
+				{/if}
+				{#if q.codeSnippet}
+					<Badge variant="outline" class="text-xs">Code</Badge>
+				{/if}
+			</div>
+			<p class="line-clamp-2 text-sm text-foreground">{q.text}</p>
+		</div>
+
+		<div class="flex shrink-0 items-center gap-1">
+			<Button variant="ghost" size="icon-sm" onclick={() => openEditQuestion(q)}>
+				<Pencil class="size-4" />
+				<span class="sr-only">Edit question</span>
+			</Button>
+			<Button variant="ghost" size="icon-sm" onclick={() => handleDeleteClick(q)}>
+				<Trash2 class="size-4 text-destructive" />
+				<span class="sr-only">Delete question</span>
+			</Button>
+		</div>
+	</div>
+{/snippet}
+
+{#snippet groupSection(item: Extract<TreeItem, { type: 'group' }>, itemIndex: number)}
+	{@const count = item.questions.length}
+	{@const collapsed = collapsedGroups.has(item.group.id)}
+	<div
+		role="listitem"
+		class="rounded-lg border border-border bg-muted/40 transition-shadow {dropLocation?.kind ===
+			'group' && dropLocation.itemIndex === itemIndex
+			? 'ring-2 ring-primary'
+			: ''}"
+		ondragover={(e) => handleGroupDragOver(e, itemIndex, count)}
+		ondrop={handleQuestionDrop}
+	>
+		<div class="flex items-center gap-2 px-3 py-2.5">
+			<button
+				type="button"
+				onclick={() => toggleGroupCollapsed(item.group.id)}
+				aria-expanded={!collapsed}
+				aria-label="{collapsed ? 'Expand' : 'Collapse'} group {item.group.name}"
+				class="cursor-pointer text-muted-foreground hover:text-foreground"
+			>
+				{#if collapsed}
+					<ChevronRight class="size-4" />
+				{:else}
+					<ChevronDown class="size-4" />
+				{/if}
+			</button>
+			{#if collapsed}
+				<Folder class="size-4 shrink-0 text-muted-foreground" />
+			{:else}
+				<FolderOpen class="size-4 shrink-0 text-muted-foreground" />
+			{/if}
+			<span class="truncate text-sm font-medium text-foreground">{item.group.name}</span>
+			<Badge variant="secondary" class="text-xs">
+				{count}
+				{count === 1 ? 'question' : 'questions'}
+			</Badge>
+			{#if item.group.pickCount}
+				<Badge variant="outline" class="text-xs">picks {item.group.pickCount}</Badge>
+			{/if}
+		</div>
+		{#if !collapsed}
+			<div class="space-y-2 pr-3 pb-3 pl-10" role="group">
+				{#each item.questions as q, j (q.id)}
+					{#if isGroupDropAt(itemIndex, j)}
+						<div class="pointer-events-none h-0.5 rounded-full bg-primary"></div>
+					{/if}
+					{@render questionRow(q, itemIndex, j, item.questions.length)}
+				{/each}
+				{#if count > 0 && isGroupDropAt(itemIndex, count)}
+					<div class="pointer-events-none h-0.5 rounded-full bg-primary"></div>
+				{/if}
+				{#if count === 0}
+					<p class="text-xs text-muted-foreground">
+						Drag questions here to add them to this group.
+					</p>
+				{/if}
+			</div>
+		{/if}
+	</div>
+{/snippet}
+
 <!-- Delete Question Dialog -->
 <AlertDialog.Root bind:open={deleteDialogOpen}>
 	<AlertDialog.Content>
@@ -919,4 +1434,5 @@
 	quizId={quiz.id}
 	question={editingQuestion}
 	orderIndex={quiz.questions.length}
+	groups={quiz.groups ?? []}
 />

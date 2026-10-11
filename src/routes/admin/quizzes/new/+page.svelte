@@ -154,6 +154,20 @@
 					/>
 				</div>
 				<div class="space-y-2">
+					<Label for="questionsPerAttempt">Questions per Attempt (optional)</Label>
+					<Input
+						type="number"
+						name="questionsPerAttempt"
+						id="questionsPerAttempt"
+						min="1"
+						placeholder="All questions"
+						disabled={isSubmitting}
+					/>
+					<p class="text-xs text-muted-foreground">
+						Randomly select this many questions from the pool for each attempt.
+					</p>
+				</div>
+				<div class="space-y-2">
 					<Label for="revealAnswersAfter">Reveal Answers After</Label>
 					<Select.Root type="single" bind:value={revealAnswersAfter}>
 						<Select.Trigger id="revealAnswersAfter" class="w-full">

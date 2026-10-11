@@ -60,6 +60,24 @@
 				</select>
 			</div>
 
+			{#if quiz.groups?.length}
+				<div>
+					<label for="groupId" class="block text-sm font-medium text-foreground">
+						Group (optional)
+					</label>
+					<select
+						name="groupId"
+						id="groupId"
+						class="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-sm focus:border-ring focus:ring-2 focus:ring-ring focus:outline-none sm:text-sm"
+					>
+						<option value="">No group</option>
+						{#each quiz.groups as group (group.id)}
+							<option value={group.id}>{group.name}</option>
+						{/each}
+					</select>
+				</div>
+			{/if}
+
 			<div>
 				<label for="text" class="block text-sm font-medium text-foreground">Question Text</label>
 				<textarea

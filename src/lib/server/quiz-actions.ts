@@ -1,15 +1,18 @@
-import { eq, desc, count, and, inArray } from 'drizzle-orm';
+import { eq, desc, count, and, inArray, asc } from 'drizzle-orm';
 import { db } from './db';
-import { quiz, question, attempt } from './db/schema';
+import { quiz, question, attempt, questionGroup } from './db/schema';
 import {
 	quizCreateSchema,
 	quizUpdateSchema,
 	quizStatusToggleSchema,
 	questionCreateSchema,
-	questionUpdateSchema
+	questionUpdateSchema,
+	questionGroupCreateSchema,
+	questionGroupUpdateSchema
 } from './validations';
 import { saveQuestionMedia, deleteQuestionMedia } from './storage';
 import { getEffectiveStatus, validateSchedule } from '$lib/quiz-status';
+import { MAX_QUESTIONS_PER_QUIZ, MAX_QUESTION_GROUPS_PER_QUIZ } from '$lib/constants';
 
 /**
  * Normalize the correctAnswer form field into the shape expected by the
@@ -138,16 +141,109 @@ export async function getQuizById(id: string) {
 
 	if (!quizData) return null;
 
-	// Get questions separately
-	const questions = await db.query.question.findMany({
-		where: eq(question.quizId, id),
-		orderBy: [question.orderIndex]
-	});
+	// Get questions and groups separately
+	const [questions, groups] = await Promise.all([
+		db.query.question.findMany({
+			where: eq(question.quizId, id),
+			orderBy: [question.orderIndex]
+		}),
+		db.query.questionGroup.findMany({
+			where: eq(questionGroup.quizId, id),
+			orderBy: [asc(questionGroup.orderIndex), asc(questionGroup.name)]
+		})
+	]);
 
 	return {
 		...quizData,
-		questions: questions.map(normalizeQuestion)
+		questions: questions.map(normalizeQuestion),
+		groups
 	};
+}
+
+export async function listQuestionGroups(quizId: string) {
+	return db.query.questionGroup.findMany({
+		where: eq(questionGroup.quizId, quizId),
+		orderBy: [asc(questionGroup.orderIndex), asc(questionGroup.name)]
+	});
+}
+
+function parseGroupId(raw: unknown): string | null | undefined {
+	if (raw === undefined) return undefined;
+	const value = String(raw).trim();
+	return value === '' ? null : value;
+}
+
+/** Groups must belong to the same quiz as the question they are assigned to. */
+async function validateGroupAssignment(
+	quizId: string,
+	groupId: string | null | undefined
+): Promise<string | null> {
+	if (groupId == null) return null;
+	const group = await db.query.questionGroup.findFirst({
+		where: eq(questionGroup.id, groupId)
+	});
+	if (!group || group.quizId !== quizId) return null;
+	return groupId;
+}
+
+export async function createQuestionGroup(formData: FormData) {
+	const data = Object.fromEntries(formData);
+	const parsed = questionGroupCreateSchema.safeParse({
+		quizId: data.quizId,
+		name: typeof data.name === 'string' ? data.name.trim() : data.name,
+		pickCount: data.pickCount ? Number(data.pickCount) : null
+	});
+
+	if (!parsed.success) {
+		return { success: false, error: 'Invalid data' };
+	}
+
+	const existing = await db.query.questionGroup.findMany({
+		where: eq(questionGroup.quizId, parsed.data.quizId)
+	});
+
+	if (existing.length >= MAX_QUESTION_GROUPS_PER_QUIZ) {
+		return {
+			success: false,
+			error: `A quiz can have at most ${MAX_QUESTION_GROUPS_PER_QUIZ} groups`
+		};
+	}
+
+	const newGroup = await db
+		.insert(questionGroup)
+		.values({ ...parsed.data, orderIndex: existing.length })
+		.returning();
+
+	return { success: true, group: newGroup[0] };
+}
+
+export async function updateQuestionGroup(formData: FormData) {
+	const data = Object.fromEntries(formData);
+	const parsed = questionGroupUpdateSchema.safeParse({
+		id: data.id,
+		name: typeof data.name === 'string' ? data.name.trim() : data.name,
+		pickCount: data.pickCount === '' || data.pickCount == null ? null : Number(data.pickCount)
+	});
+
+	if (!parsed.success) {
+		return { success: false, error: 'Invalid data' };
+	}
+
+	const updated = await db
+		.update(questionGroup)
+		.set({ name: parsed.data.name, pickCount: parsed.data.pickCount })
+		.where(eq(questionGroup.id, parsed.data.id))
+		.returning();
+
+	return { success: true, group: updated[0] };
+}
+
+export async function deleteQuestionGroup(id: string) {
+	// Foreign keys are not enforced at runtime, so unassign questions
+	// explicitly — deleting a group must not delete its questions.
+	await db.update(question).set({ groupId: null }).where(eq(question.groupId, id));
+	await db.delete(questionGroup).where(eq(questionGroup.id, id));
+	return { success: true };
 }
 
 export async function createQuiz(formData: FormData) {
@@ -164,6 +260,7 @@ export async function createQuiz(formData: FormData) {
 					? Number(data.maxAttempts)
 					: undefined,
 		maxParticipants: data.maxParticipants ? Number(data.maxParticipants) : null,
+		questionsPerAttempt: data.questionsPerAttempt ? Number(data.questionsPerAttempt) : null,
 		shuffleQuestions: data.shuffleQuestions === 'on',
 		allowBackNavigation: data.allowBackNavigation === 'on',
 		isVisibleAfterExpiry:
@@ -211,6 +308,12 @@ export async function updateQuiz(formData: FormData) {
 				? null
 				: data.maxParticipants
 					? Number(data.maxParticipants)
+					: undefined,
+		questionsPerAttempt:
+			data.questionsPerAttempt === ''
+				? null
+				: data.questionsPerAttempt
+					? Number(data.questionsPerAttempt)
 					: undefined,
 		shuffleQuestions: data.shuffleQuestions === 'on',
 		allowBackNavigation: data.allowBackNavigation === 'on',
@@ -283,6 +386,7 @@ export async function deleteQuiz(id: string) {
 export async function duplicateQuiz(id: string) {
 	const originalQuiz = (await getQuizById(id)) as {
 		questions: any[];
+		groups: { id: string; name: string; pickCount: number | null; orderIndex: number }[];
 		[key: string]: any;
 	} | null;
 	if (!originalQuiz) {
@@ -297,6 +401,7 @@ export async function duplicateQuiz(id: string) {
 			password: originalQuiz.password,
 			timeLimitSeconds: originalQuiz.timeLimitSeconds,
 			shuffleQuestions: originalQuiz.shuffleQuestions,
+			questionsPerAttempt: originalQuiz.questionsPerAttempt,
 			maxAttempts: originalQuiz.maxAttempts,
 			maxParticipants: originalQuiz.maxParticipants,
 			allowBackNavigation: originalQuiz.allowBackNavigation,
@@ -311,10 +416,27 @@ export async function duplicateQuiz(id: string) {
 		})
 		.returning();
 
+	// Duplicate groups first so question.groupId can be remapped
+	const groupIdMap = new Map<string, string>();
+	if (originalQuiz.groups && originalQuiz.groups.length > 0) {
+		const newGroupIds = originalQuiz.groups.map(() => crypto.randomUUID());
+		await db.insert(questionGroup).values(
+			originalQuiz.groups.map((g, i) => ({
+				id: newGroupIds[i],
+				quizId: newQuiz[0].id,
+				name: g.name,
+				pickCount: g.pickCount,
+				orderIndex: g.orderIndex
+			}))
+		);
+		originalQuiz.groups.forEach((g, i) => groupIdMap.set(g.id, newGroupIds[i]));
+	}
+
 	// Duplicate questions
 	if (originalQuiz.questions && originalQuiz.questions.length > 0) {
 		const questionValues = originalQuiz.questions.map((q: any) => ({
 			quizId: newQuiz[0].id,
+			groupId: q.groupId ? (groupIdMap.get(q.groupId) ?? null) : null,
 			type: q.type,
 			text: q.text,
 			mediaUrl: q.mediaUrl,
@@ -376,6 +498,7 @@ export async function createQuestion(formData: FormData) {
 	const processedData: Record<string, unknown> = {
 		...data,
 		orderIndex: Number(data.orderIndex),
+		groupId: parseGroupId(data.groupId),
 		mediaUrl:
 			typeof data.mediaUrl === 'string' && data.mediaUrl.trim() !== ''
 				? data.mediaUrl.trim()
@@ -395,13 +518,20 @@ export async function createQuestion(formData: FormData) {
 		return { success: false, error: 'Invalid data' };
 	}
 
-	// Check max 50 questions per quiz
+	if (parsed.data.groupId) {
+		const validGroupId = await validateGroupAssignment(parsed.data.quizId, parsed.data.groupId);
+		if (!validGroupId) {
+			return { success: false, error: 'Invalid question group' };
+		}
+	}
+
+	// Check question pool size limit
 	const quizQuestions = await db.query.question.findMany({
 		where: eq(question.quizId, parsed.data.quizId)
 	});
 
-	if (quizQuestions.length >= 50) {
-		return { success: false, error: 'Maximum 50 questions per quiz' };
+	if (quizQuestions.length >= MAX_QUESTIONS_PER_QUIZ) {
+		return { success: false, error: `Maximum ${MAX_QUESTIONS_PER_QUIZ} questions per quiz` };
 	}
 
 	const newQuestion = await db
@@ -442,6 +572,7 @@ export async function updateQuestion(formData: FormData) {
 	const processedData: Record<string, unknown> = {
 		...data,
 		orderIndex: data.orderIndex ? Number(data.orderIndex) : undefined,
+		groupId: parseGroupId(data.groupId),
 		mediaUrl:
 			typeof data.mediaUrl === 'string' && data.mediaUrl.trim() !== ''
 				? data.mediaUrl.trim()
@@ -469,6 +600,16 @@ export async function updateQuestion(formData: FormData) {
 		where: eq(question.id, id)
 	});
 	const previousMediaUrl = previousQuestion?.mediaUrl ?? null;
+
+	if (updateData.groupId) {
+		const targetQuizId = quizId ?? previousQuestion?.quizId;
+		const validGroupId = targetQuizId
+			? await validateGroupAssignment(targetQuizId, updateData.groupId)
+			: null;
+		if (!validGroupId) {
+			return { success: false, error: 'Invalid question group' };
+		}
+	}
 
 	const updatedQuestion = await db
 		.update(question)
@@ -532,12 +673,40 @@ export async function deleteQuestion(id: string) {
 	return { success: true };
 }
 
-export async function reorderQuestions(quizId: string, questionIds: string[]) {
-	const updates = questionIds.map((id, index) =>
-		db.update(question).set({ orderIndex: index }).where(eq(question.id, id))
-	);
+/**
+ * Rewrites the flat question order and group assignments in one pass. The
+ * incoming list must cover every question in the quiz exactly once; each
+ * entry carries the id of the group it now belongs to (null = ungrouped).
+ */
+export async function reorderQuestions(
+	quizId: string,
+	items: { id: string; groupId: string | null }[]
+) {
+	const [questions, groups] = await Promise.all([
+		db.query.question.findMany({ where: eq(question.quizId, quizId) }),
+		db.query.questionGroup.findMany({ where: eq(questionGroup.quizId, quizId) })
+	]);
 
-	await Promise.all(updates);
+	const validIds = new Set(questions.map((q) => q.id));
+	const validGroupIds = new Set(groups.map((g) => g.id));
+	if (
+		items.length !== questions.length ||
+		new Set(items.map((it) => it.id)).size !== items.length ||
+		items.some(
+			(it) => !validIds.has(it.id) || (it.groupId != null && !validGroupIds.has(it.groupId))
+		)
+	) {
+		return { success: false, error: 'Invalid question order' };
+	}
+
+	await Promise.all(
+		items.map((it, index) =>
+			db
+				.update(question)
+				.set({ orderIndex: index, groupId: it.groupId ?? null })
+				.where(eq(question.id, it.id))
+		)
+	);
 	return { success: true };
 }
 

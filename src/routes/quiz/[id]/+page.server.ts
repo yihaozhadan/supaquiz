@@ -1,7 +1,7 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
-import { question, quiz } from '$lib/server/db/schema';
-import { count, eq } from 'drizzle-orm';
+import { question, questionGroup, quiz } from '$lib/server/db/schema';
+import { asc, eq } from 'drizzle-orm';
 import {
 	checkQuizAvailability,
 	countAttemptsForParticipant,
@@ -17,6 +17,8 @@ import {
 	markPasswordVerified
 } from '$lib/server/quiz-session';
 import { verifySession } from '$lib/server/auth';
+import { selectQuestionOrder } from '$lib/question-selection';
+import { saveSessionQuestions } from '$lib/server/session-questions';
 import type { Actions, PageServerLoad } from './$types';
 
 function safeParse<T>(value: unknown): T | null {
@@ -34,11 +36,22 @@ function safeParse<T>(value: unknown): T | null {
 async function loadQuizMeta(id: string) {
 	const quizData = await db.query.quiz.findFirst({ where: eq(quiz.id, id) });
 	if (!quizData) return null;
-	const questionCount = await db
-		.select({ count: count() })
-		.from(question)
-		.where(eq(question.quizId, id));
-	return { ...quizData, questionCount: questionCount[0].count };
+	const questions = await db.query.question.findMany({
+		where: eq(question.quizId, id),
+		orderBy: [question.orderIndex],
+		columns: { id: true, groupId: true }
+	});
+	const groups = await db.query.questionGroup.findMany({
+		where: eq(questionGroup.quizId, id),
+		orderBy: [asc(questionGroup.orderIndex)]
+	});
+	// The served count is deterministic even though sampling is random.
+	const servedCount = selectQuestionOrder(questions, {
+		shuffle: false,
+		subsetSize: quizData.questionsPerAttempt,
+		groups
+	}).length;
+	return { ...quizData, questionCount: questions.length, servedCount };
 }
 
 export const load: PageServerLoad = async ({ params, cookies, url }) => {
@@ -98,7 +111,8 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 			id: quizData.id,
 			title: quizData.title,
 			description: quizData.description,
-			questionCount: quizData.questionCount,
+			questionCount: quizData.servedCount,
+			poolQuestionCount: quizData.questionCount,
 			timeLimitSeconds: quizData.timeLimitSeconds,
 			maxAttempts: quizData.maxAttempts,
 			activateAt: quizData.activateAt,
@@ -175,21 +189,25 @@ export const actions: Actions = {
 			where: eq(question.quizId, quizData.id),
 			orderBy: [question.orderIndex]
 		});
+		const groups = await db.query.questionGroup.findMany({
+			where: eq(questionGroup.quizId, quizData.id),
+			orderBy: [asc(questionGroup.orderIndex)]
+		});
 
-		let questionOrder = questions.map((q) => q.id);
-		if (quizData.shuffleQuestions) {
-			questionOrder = [...questionOrder];
-			for (let i = questionOrder.length - 1; i > 0; i--) {
-				const j = Math.floor(Math.random() * (i + 1));
-				[questionOrder[i], questionOrder[j]] = [questionOrder[j], questionOrder[i]];
-			}
-		}
+		const questionOrder = selectQuestionOrder(questions, {
+			shuffle: quizData.shuffleQuestions,
+			subsetSize: quizData.questionsPerAttempt,
+			groups
+		});
+
+		const sessionId = crypto.randomUUID();
+		saveSessionQuestions(sessionId, questionOrder);
 
 		await createQuizSession(cookies, {
 			quizId: quizData.id,
 			participantKey,
 			intakeFormData,
-			questionOrder,
+			sessionId,
 			startedAt: Date.now(),
 			preview
 		});

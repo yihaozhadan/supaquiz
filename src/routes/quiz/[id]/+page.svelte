@@ -290,6 +290,11 @@
 						</span>
 					{/if}
 				</div>
+				{#if data.quiz.questionCount < data.quiz.poolQuestionCount}
+					<p class="pt-1 text-xs text-muted-foreground">
+						Questions are randomly selected from a pool of {data.quiz.poolQuestionCount}.
+					</p>
+				{/if}
 			</CardHeader>
 			<CardContent>
 				<form

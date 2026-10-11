@@ -11,6 +11,7 @@ export interface PreviewAttempt {
 	quizId: string;
 	participantKey: string;
 	intakeFormData: Record<string, unknown>;
+	questionIds: string[];
 	answers: Record<string, unknown>;
 	score: number;
 	totalQuestions: number;

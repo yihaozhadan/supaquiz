@@ -107,6 +107,12 @@ export interface SubmitAttemptInput {
 	intakeFormData: Record<string, unknown>;
 	answers: Record<string, unknown>;
 	timeTakenSeconds: number;
+	/**
+	 * The question ids served for this attempt (from the quiz session).
+	 * Grading and the stored total are scoped to this set so a configured
+	 * random subset never counts unserved questions.
+	 */
+	questionIds: string[];
 }
 
 /**
@@ -130,7 +136,10 @@ export async function submitAttempt(input: SubmitAttemptInput) {
 		return { success: false as const, error: 'Maximum attempts reached for this quiz' };
 	}
 
-	const questions = await db.query.question.findMany({ where: eq(question.quizId, input.quizId) });
+	const servedIds = new Set(input.questionIds);
+	const questions = (
+		await db.query.question.findMany({ where: eq(question.quizId, input.quizId) })
+	).filter((q) => servedIds.has(q.id));
 	const gradable: GradableQuestion[] = questions.map((q) => ({
 		id: q.id,
 		type: q.type,
@@ -145,6 +154,7 @@ export async function submitAttempt(input: SubmitAttemptInput) {
 			quizId: input.quizId,
 			participantKey: input.participantKey,
 			intakeFormData: input.intakeFormData,
+			questionIds: input.questionIds,
 			answers: input.answers,
 			score: grading.score,
 			totalQuestions: grading.totalQuestions,
@@ -164,13 +174,20 @@ export async function submitAttempt(input: SubmitAttemptInput) {
  * Used for admin previews: availability and attempt limits are not
  * enforced because a preview is the owner checking their own quiz.
  */
-export async function gradePreviewAttempt(quizId: string, answers: Record<string, unknown>) {
+export async function gradePreviewAttempt(
+	quizId: string,
+	answers: Record<string, unknown>,
+	questionIds?: string[]
+) {
 	const quizData = await db.query.quiz.findFirst({ where: eq(quiz.id, quizId) });
 	if (!quizData) {
 		return { success: false as const, error: 'Quiz not found' };
 	}
 
-	const questions = await db.query.question.findMany({ where: eq(question.quizId, quizId) });
+	const servedIds = questionIds ? new Set(questionIds) : null;
+	const questions = (
+		await db.query.question.findMany({ where: eq(question.quizId, quizId) })
+	).filter((q) => !servedIds || servedIds.has(q.id));
 	const gradable: GradableQuestion[] = questions.map((q) => ({
 		id: q.id,
 		type: q.type,

@@ -1,5 +1,5 @@
 import { db } from './db';
-import { quiz, question } from './db/schema';
+import { quiz, question, questionGroup } from './db/schema';
 import { getQuizById } from './quiz-actions';
 import { quizExportSchema } from './validations';
 import { copyQuestionMedia } from './storage';
@@ -12,6 +12,7 @@ export interface QuizExportData {
 		password: string | null;
 		timeLimitSeconds: number | null;
 		shuffleQuestions: boolean;
+		questionsPerAttempt: number | null;
 		maxAttempts: number | null;
 		maxParticipants: number | null;
 		allowBackNavigation: boolean;
@@ -30,6 +31,13 @@ export interface QuizExportData {
 		explanation: string | null;
 		codeSnippet: string | null;
 		orderIndex: number;
+		groupName: string | null;
+	}>;
+	/** Question groups, referenced from questions by name. */
+	groups?: Array<{
+		name: string;
+		pickCount: number | null;
+		orderIndex: number;
 	}>;
 }
 
@@ -43,6 +51,8 @@ export async function exportQuiz(id: string): Promise<QuizExportData | null> {
 	const quizData = await getQuizById(id);
 	if (!quizData) return null;
 
+	const groupNameById = new Map(quizData.groups.map((g) => [g.id, g.name]));
+
 	return {
 		version: 1,
 		quiz: {
@@ -51,6 +61,7 @@ export async function exportQuiz(id: string): Promise<QuizExportData | null> {
 			password: quizData.password,
 			timeLimitSeconds: quizData.timeLimitSeconds,
 			shuffleQuestions: quizData.shuffleQuestions,
+			questionsPerAttempt: quizData.questionsPerAttempt,
 			maxAttempts: quizData.maxAttempts,
 			maxParticipants: quizData.maxParticipants,
 			allowBackNavigation: quizData.allowBackNavigation,
@@ -68,7 +79,13 @@ export async function exportQuiz(id: string): Promise<QuizExportData | null> {
 			correctAnswer: q.correctAnswer,
 			explanation: q.explanation,
 			codeSnippet: q.codeSnippet,
-			orderIndex: q.orderIndex
+			orderIndex: q.orderIndex,
+			groupName: q.groupId ? (groupNameById.get(q.groupId) ?? null) : null
+		})),
+		groups: quizData.groups.map((g) => ({
+			name: g.name,
+			pickCount: g.pickCount,
+			orderIndex: g.orderIndex
 		}))
 	};
 }
@@ -94,7 +111,7 @@ export async function importQuiz(jsonText: string) {
 		return { success: false as const, error: 'Invalid quiz export format' };
 	}
 
-	const { quiz: quizFields, questions } = parsed.data;
+	const { quiz: quizFields, questions, groups } = parsed.data;
 
 	const newQuiz = await db
 		.insert(quiz)
@@ -105,6 +122,22 @@ export async function importQuiz(jsonText: string) {
 		.returning();
 
 	const warnings: string[] = [];
+
+	// Recreate groups first so questions can reference them by name.
+	const groupIdByName = new Map<string, string>();
+	if (groups && groups.length > 0) {
+		const newGroupIds = groups.map(() => crypto.randomUUID());
+		await db.insert(questionGroup).values(
+			groups.map((g, i) => ({
+				id: newGroupIds[i],
+				quizId: newQuiz[0].id,
+				name: g.name,
+				pickCount: g.pickCount ?? null,
+				orderIndex: g.orderIndex
+			}))
+		);
+		groups.forEach((g, i) => groupIdByName.set(g.name, newGroupIds[i]));
+	}
 
 	if (questions.length > 0) {
 		const questionValues = [];
@@ -121,8 +154,12 @@ export async function importQuiz(jsonText: string) {
 					}
 				}
 			}
+			if (q.groupName && !groupIdByName.has(q.groupName)) {
+				warnings.push(`Unknown group "${q.groupName}" for question: "${q.text.slice(0, 60)}"`);
+			}
 			questionValues.push({
 				quizId: newQuiz[0].id,
+				groupId: q.groupName ? (groupIdByName.get(q.groupName) ?? null) : null,
 				type: q.type,
 				text: q.text,
 				mediaUrl,

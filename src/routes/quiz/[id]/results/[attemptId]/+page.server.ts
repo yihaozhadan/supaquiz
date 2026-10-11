@@ -80,17 +80,27 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 			where: eq(question.quizId, params.id),
 			orderBy: [question.orderIndex]
 		});
-		questions = raw.map((q) => {
-			const normalized = normalizeQuestion(q);
-			return {
-				id: normalized.id,
-				text: normalized.text,
-				type: normalized.type,
-				options: normalized.options as { id?: string; text: string }[] | null,
-				correctAnswer: normalized.correctAnswer as string | string[],
-				explanation: normalized.explanation
-			};
-		});
+		const byId = new Map(raw.map((q) => [q.id, q]));
+		// Attempts record the questions that were served (a random subset when
+		// the quiz is configured that way). Legacy attempts lack the list and
+		// fall back to the full pool.
+		const servedIds = Array.isArray(attemptData.questionIds)
+			? attemptData.questionIds
+			: raw.map((q) => q.id);
+		questions = servedIds
+			.map((id) => byId.get(id))
+			.filter((q): q is NonNullable<typeof q> => Boolean(q))
+			.map((q) => {
+				const normalized = normalizeQuestion(q);
+				return {
+					id: normalized.id,
+					text: normalized.text,
+					type: normalized.type,
+					options: normalized.options as { id?: string; text: string }[] | null,
+					correctAnswer: normalized.correctAnswer as string | string[],
+					explanation: normalized.explanation
+				};
+			});
 	}
 
 	const percentage =
