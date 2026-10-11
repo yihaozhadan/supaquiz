@@ -14,6 +14,7 @@ The project is implemented as a SvelteKit application using TypeScript, with a S
 - **Password protection**: Optional password protection per quiz
 - **Custom participant intake forms**: Text, email, number, and select fields
 - **Question shuffling and randomization**: Questions can be shuffled for each attempt
+- **Question groups**: Organize the pool into sections with optional per-group random sampling per attempt — see [Question Groups](QuestionGroups.md)
 - **Time limits and attempt restrictions**: Per-participant controls identified by email or browser fingerprint
 - **Participant limits**: Configure maximum number of participants per quiz
 - **Scheduling**: Activation and expiration dates with lazy evaluation on each request
