@@ -12,7 +12,7 @@ import {
 } from './validations';
 import { saveQuestionMedia, deleteQuestionMedia } from './storage';
 import { getEffectiveStatus, validateSchedule } from '$lib/quiz-status';
-import { MAX_QUESTIONS_PER_QUIZ } from '$lib/constants';
+import { MAX_QUESTIONS_PER_QUIZ, MAX_QUESTION_GROUPS_PER_QUIZ } from '$lib/constants';
 
 /**
  * Normalize the correctAnswer form field into the shape expected by the
@@ -201,6 +201,13 @@ export async function createQuestionGroup(formData: FormData) {
 	const existing = await db.query.questionGroup.findMany({
 		where: eq(questionGroup.quizId, parsed.data.quizId)
 	});
+
+	if (existing.length >= MAX_QUESTION_GROUPS_PER_QUIZ) {
+		return {
+			success: false,
+			error: `A quiz can have at most ${MAX_QUESTION_GROUPS_PER_QUIZ} groups`
+		};
+	}
 
 	const newGroup = await db
 		.insert(questionGroup)
@@ -666,12 +673,40 @@ export async function deleteQuestion(id: string) {
 	return { success: true };
 }
 
-export async function reorderQuestions(quizId: string, questionIds: string[]) {
-	const updates = questionIds.map((id, index) =>
-		db.update(question).set({ orderIndex: index }).where(eq(question.id, id))
-	);
+/**
+ * Rewrites the flat question order and group assignments in one pass. The
+ * incoming list must cover every question in the quiz exactly once; each
+ * entry carries the id of the group it now belongs to (null = ungrouped).
+ */
+export async function reorderQuestions(
+	quizId: string,
+	items: { id: string; groupId: string | null }[]
+) {
+	const [questions, groups] = await Promise.all([
+		db.query.question.findMany({ where: eq(question.quizId, quizId) }),
+		db.query.questionGroup.findMany({ where: eq(questionGroup.quizId, quizId) })
+	]);
 
-	await Promise.all(updates);
+	const validIds = new Set(questions.map((q) => q.id));
+	const validGroupIds = new Set(groups.map((g) => g.id));
+	if (
+		items.length !== questions.length ||
+		new Set(items.map((it) => it.id)).size !== items.length ||
+		items.some(
+			(it) => !validIds.has(it.id) || (it.groupId != null && !validGroupIds.has(it.groupId))
+		)
+	) {
+		return { success: false, error: 'Invalid question order' };
+	}
+
+	await Promise.all(
+		items.map((it, index) =>
+			db
+				.update(question)
+				.set({ orderIndex: index, groupId: it.groupId ?? null })
+				.where(eq(question.id, it.id))
+		)
+	);
 	return { success: true };
 }
 

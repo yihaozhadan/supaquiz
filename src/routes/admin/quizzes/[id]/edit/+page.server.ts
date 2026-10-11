@@ -3,6 +3,7 @@ import {
 	updateQuiz,
 	toggleQuizStatus,
 	moveQuestion,
+	reorderQuestions,
 	deleteQuestion,
 	createQuestion,
 	updateQuestion,
@@ -70,6 +71,24 @@ export const actions = {
 			return result;
 		}
 		return { success: true, message: 'Question moved successfully' };
+	},
+	reorderQuestions: async ({ request }) => {
+		const formData = await request.formData();
+		const quizId = formData.get('quizId') as string;
+		let items: { id: string; groupId: string | null }[];
+		try {
+			items = JSON.parse(String(formData.get('items') ?? '[]'));
+		} catch {
+			return fail(400, { error: 'Invalid question order' });
+		}
+		if (!Array.isArray(items)) {
+			return fail(400, { error: 'Invalid question order' });
+		}
+		const result = await reorderQuestions(quizId, items);
+		if (!result.success) {
+			return fail(400, { error: result.error });
+		}
+		return { success: true, message: 'Question order saved' };
 	},
 	deleteQuestion: async ({ request }) => {
 		const formData = await request.formData();

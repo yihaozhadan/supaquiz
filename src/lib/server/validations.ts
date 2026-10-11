@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { MAX_QUESTIONS_PER_QUIZ } from '$lib/constants';
+import { MAX_QUESTIONS_PER_QUIZ, MAX_QUESTION_GROUPS_PER_QUIZ } from '$lib/constants';
 
 export const intakeFormFieldSchema = z.object({
 	name: z.string().min(1).max(100),
@@ -118,5 +118,5 @@ export const quizExportSchema = z.object({
 		isVisibleAfterExpiry: z.boolean().default(true)
 	}),
 	questions: z.array(quizExportQuestionSchema).max(MAX_QUESTIONS_PER_QUIZ),
-	groups: z.array(quizExportGroupSchema).optional()
+	groups: z.array(quizExportGroupSchema).max(MAX_QUESTION_GROUPS_PER_QUIZ).optional()
 });

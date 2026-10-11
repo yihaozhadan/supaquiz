@@ -6,8 +6,10 @@ import {
 	createQuestionGroup,
 	createQuestion,
 	deleteQuestionGroup,
-	listQuestionGroups
+	listQuestionGroups,
+	reorderQuestions
 } from './quiz-actions';
+import { MAX_QUESTION_GROUPS_PER_QUIZ } from '$lib/constants';
 import { resolveSessionQuestions } from './session-questions';
 
 /**
@@ -158,6 +160,78 @@ describe('question groups', () => {
 		const remaining = await db.query.question.findFirst({ where: eq(question.id, qn.id) });
 		expect(remaining).toBeDefined();
 		expect(remaining?.groupId).toBeNull();
+	});
+
+	it('rejects creating groups past the per-quiz limit', async () => {
+		const q = await seedQuiz();
+		await db.insert(questionGroup).values(
+			Array.from({ length: MAX_QUESTION_GROUPS_PER_QUIZ }, (_, i) => ({
+				quizId: q.id,
+				name: `G${i}`,
+				orderIndex: i
+			}))
+		);
+
+		const fd = new FormData();
+		fd.append('quizId', q.id);
+		fd.append('name', 'One too many');
+		const result = await createQuestionGroup(fd);
+		expect(result.success).toBe(false);
+	});
+
+	it('reorders questions and assigns group membership', async () => {
+		const q = await seedQuiz();
+		const [g1, g2] = await db
+			.insert(questionGroup)
+			.values([
+				{ quizId: q.id, name: 'G1', orderIndex: 0 },
+				{ quizId: q.id, name: 'G2', orderIndex: 1 }
+			])
+			.returning();
+		const [q1, q2, q3] = await db
+			.insert(question)
+			.values([
+				{ quizId: q.id, type: 'fitb', text: 'a', correctAnswer: 'a', orderIndex: 0 },
+				{ quizId: q.id, type: 'fitb', text: 'b', correctAnswer: 'a', orderIndex: 1 },
+				{
+					quizId: q.id,
+					groupId: g1.id,
+					type: 'fitb',
+					text: 'c',
+					correctAnswer: 'a',
+					orderIndex: 2
+				}
+			])
+			.returning();
+
+		const result = await reorderQuestions(q.id, [
+			{ id: q2.id, groupId: g2.id },
+			{ id: q3.id, groupId: null },
+			{ id: q1.id, groupId: g2.id }
+		]);
+		expect(result.success).toBe(true);
+
+		const rows = await db.query.question.findMany({
+			where: eq(question.quizId, q.id),
+			orderBy: [question.orderIndex]
+		});
+		expect(rows.map((r) => [r.id, r.groupId])).toEqual([
+			[q2.id, g2.id],
+			[q3.id, null],
+			[q1.id, g2.id]
+		]);
+
+		// Rejects incomplete or foreign payloads.
+		expect((await reorderQuestions(q.id, [{ id: q1.id, groupId: null }])).success).toBe(false);
+		expect(
+			(
+				await reorderQuestions(q.id, [
+					{ id: q1.id, groupId: null },
+					{ id: q2.id, groupId: null },
+					{ id: q3.id, groupId: 'not-a-real-group' }
+				])
+			).success
+		).toBe(false);
 	});
 
 	it('serves ungrouped questions plus the per-group pick count per attempt', async () => {
