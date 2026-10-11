@@ -53,13 +53,14 @@ function buildSummary(row: {
 	expireAt: Date | null;
 	createdAt: Date;
 	questionCount: number;
+	questionsPerAttempt: number | null;
 	attemptCount: number;
 }): PublicQuizSummary {
 	return {
 		id: row.id,
 		title: row.title,
 		description: row.description,
-		questionCount: row.questionCount,
+		questionCount: Math.min(row.questionsPerAttempt ?? row.questionCount, row.questionCount),
 		timeLimitSeconds: row.timeLimitSeconds,
 		attemptCount: row.attemptCount,
 		isPasswordProtected: Boolean(row.password),
@@ -136,6 +137,7 @@ export async function getPublicQuizzes(limit?: number): Promise<PublicQuizSummar
 			expireAt: q.expireAt,
 			createdAt: q.createdAt,
 			questionCount: questionCountMap.get(q.id) ?? 0,
+			questionsPerAttempt: q.questionsPerAttempt,
 			attemptCount: attemptCountMap.get(q.id) ?? 0
 		})
 	);
@@ -223,6 +225,7 @@ export async function getPublicQuizzesPaged(options: {
 			activateAt: quiz.activateAt,
 			expireAt: quiz.expireAt,
 			createdAt: quiz.createdAt,
+			questionsPerAttempt: quiz.questionsPerAttempt,
 			questionCount: sql<number>`coalesce(${questionCountSubquery.questionCount}, 0)`.mapWith(
 				Number
 			),

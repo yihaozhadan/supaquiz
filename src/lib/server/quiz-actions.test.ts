@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { db } from './db';
 import { quiz, question } from './db/schema';
 import { toggleQuizStatus, createQuestion } from './quiz-actions';
+import { MAX_QUESTIONS_PER_QUIZ } from '$lib/constants';
 import { eq } from 'drizzle-orm';
 
 // Mock the database
@@ -120,8 +121,8 @@ describe('Quiz Constraints', () => {
 		});
 	});
 
-	describe('Max 50 Questions per Quiz', () => {
-		it('should allow adding question when less than 50 questions exist', async () => {
+	describe('Max Questions per Quiz', () => {
+		it('should allow adding question when below the pool limit', async () => {
 			vi.mocked(db.query.question.findMany).mockResolvedValue([]);
 
 			const formData = new FormData();
@@ -142,8 +143,8 @@ describe('Quiz Constraints', () => {
 			expect(result.success).toBe(true);
 		});
 
-		it('should reject adding question when 50 questions exist', async () => {
-			const mockQuestions = Array.from({ length: 50 }, (_, i) => ({
+		it(`should reject adding question when ${MAX_QUESTIONS_PER_QUIZ} questions exist`, async () => {
+			const mockQuestions = Array.from({ length: MAX_QUESTIONS_PER_QUIZ }, (_, i) => ({
 				id: `123e4567-e89b-12d3-a456-426614174${String(i).padStart(3, '0')}`,
 				quizId: '123e4567-e89b-12d3-a456-426614174000'
 			}));
@@ -155,12 +156,12 @@ describe('Quiz Constraints', () => {
 			formData.append('type', 'mcq_single');
 			formData.append('text', 'Test question?');
 			formData.append('correctAnswer', JSON.stringify('option1'));
-			formData.append('orderIndex', '50');
+			formData.append('orderIndex', String(MAX_QUESTIONS_PER_QUIZ));
 
 			const result = await createQuestion(formData);
 
 			expect(result.success).toBe(false);
-			expect(result.error).toBe('Maximum 50 questions per quiz');
+			expect(result.error).toBe(`Maximum ${MAX_QUESTIONS_PER_QUIZ} questions per quiz`);
 		});
 	});
 });

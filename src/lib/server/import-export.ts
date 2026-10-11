@@ -12,6 +12,7 @@ export interface QuizExportData {
 		password: string | null;
 		timeLimitSeconds: number | null;
 		shuffleQuestions: boolean;
+		questionsPerAttempt: number | null;
 		maxAttempts: number | null;
 		maxParticipants: number | null;
 		allowBackNavigation: boolean;
@@ -51,6 +52,7 @@ export async function exportQuiz(id: string): Promise<QuizExportData | null> {
 			password: quizData.password,
 			timeLimitSeconds: quizData.timeLimitSeconds,
 			shuffleQuestions: quizData.shuffleQuestions,
+			questionsPerAttempt: quizData.questionsPerAttempt,
 			maxAttempts: quizData.maxAttempts,
 			maxParticipants: quizData.maxParticipants,
 			allowBackNavigation: quizData.allowBackNavigation,

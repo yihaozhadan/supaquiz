@@ -10,6 +10,7 @@ import {
 } from './validations';
 import { saveQuestionMedia, deleteQuestionMedia } from './storage';
 import { getEffectiveStatus, validateSchedule } from '$lib/quiz-status';
+import { MAX_QUESTIONS_PER_QUIZ } from '$lib/constants';
 
 /**
  * Normalize the correctAnswer form field into the shape expected by the
@@ -164,6 +165,7 @@ export async function createQuiz(formData: FormData) {
 					? Number(data.maxAttempts)
 					: undefined,
 		maxParticipants: data.maxParticipants ? Number(data.maxParticipants) : null,
+		questionsPerAttempt: data.questionsPerAttempt ? Number(data.questionsPerAttempt) : null,
 		shuffleQuestions: data.shuffleQuestions === 'on',
 		allowBackNavigation: data.allowBackNavigation === 'on',
 		isVisibleAfterExpiry:
@@ -211,6 +213,12 @@ export async function updateQuiz(formData: FormData) {
 				? null
 				: data.maxParticipants
 					? Number(data.maxParticipants)
+					: undefined,
+		questionsPerAttempt:
+			data.questionsPerAttempt === ''
+				? null
+				: data.questionsPerAttempt
+					? Number(data.questionsPerAttempt)
 					: undefined,
 		shuffleQuestions: data.shuffleQuestions === 'on',
 		allowBackNavigation: data.allowBackNavigation === 'on',
@@ -297,6 +305,7 @@ export async function duplicateQuiz(id: string) {
 			password: originalQuiz.password,
 			timeLimitSeconds: originalQuiz.timeLimitSeconds,
 			shuffleQuestions: originalQuiz.shuffleQuestions,
+			questionsPerAttempt: originalQuiz.questionsPerAttempt,
 			maxAttempts: originalQuiz.maxAttempts,
 			maxParticipants: originalQuiz.maxParticipants,
 			allowBackNavigation: originalQuiz.allowBackNavigation,
@@ -395,13 +404,13 @@ export async function createQuestion(formData: FormData) {
 		return { success: false, error: 'Invalid data' };
 	}
 
-	// Check max 50 questions per quiz
+	// Check question pool size limit
 	const quizQuestions = await db.query.question.findMany({
 		where: eq(question.quizId, parsed.data.quizId)
 	});
 
-	if (quizQuestions.length >= 50) {
-		return { success: false, error: 'Maximum 50 questions per quiz' };
+	if (quizQuestions.length >= MAX_QUESTIONS_PER_QUIZ) {
+		return { success: false, error: `Maximum ${MAX_QUESTIONS_PER_QUIZ} questions per quiz` };
 	}
 
 	const newQuestion = await db

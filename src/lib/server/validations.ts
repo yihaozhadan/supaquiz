@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { MAX_QUESTIONS_PER_QUIZ } from '$lib/constants';
 
 export const intakeFormFieldSchema = z.object({
 	name: z.string().min(1).max(100),
@@ -12,6 +13,7 @@ export const quizCreateSchema = z.object({
 	password: z.string().min(0).max(100).optional(),
 	timeLimitSeconds: z.number().int().min(0).optional(),
 	shuffleQuestions: z.boolean().default(false),
+	questionsPerAttempt: z.number().int().min(1).nullable().default(null),
 	maxAttempts: z.number().int().min(1).nullable().default(1),
 	maxParticipants: z.number().int().min(1).nullable().default(null),
 	allowBackNavigation: z.boolean().default(true),
@@ -84,6 +86,7 @@ export const quizExportSchema = z.object({
 		password: z.string().nullable().optional(),
 		timeLimitSeconds: z.number().int().min(0).nullable().optional(),
 		shuffleQuestions: z.boolean().default(false),
+		questionsPerAttempt: z.number().int().min(1).nullable().default(null),
 		maxAttempts: z.number().int().min(1).nullable().default(1),
 		maxParticipants: z.number().int().min(1).nullable().default(null),
 		allowBackNavigation: z.boolean().default(true),
@@ -93,5 +96,5 @@ export const quizExportSchema = z.object({
 		isPublic: z.boolean().default(true),
 		isVisibleAfterExpiry: z.boolean().default(true)
 	}),
-	questions: z.array(quizExportQuestionSchema).max(50)
+	questions: z.array(quizExportQuestionSchema).max(MAX_QUESTIONS_PER_QUIZ)
 });

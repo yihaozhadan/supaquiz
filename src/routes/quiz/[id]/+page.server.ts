@@ -17,6 +17,8 @@ import {
 	markPasswordVerified
 } from '$lib/server/quiz-session';
 import { verifySession } from '$lib/server/auth';
+import { selectQuestionOrder } from '$lib/question-selection';
+import { saveSessionQuestions } from '$lib/server/session-questions';
 import type { Actions, PageServerLoad } from './$types';
 
 function safeParse<T>(value: unknown): T | null {
@@ -98,7 +100,11 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 			id: quizData.id,
 			title: quizData.title,
 			description: quizData.description,
-			questionCount: quizData.questionCount,
+			questionCount: Math.min(
+				quizData.questionsPerAttempt ?? quizData.questionCount,
+				quizData.questionCount
+			),
+			poolQuestionCount: quizData.questionCount,
 			timeLimitSeconds: quizData.timeLimitSeconds,
 			maxAttempts: quizData.maxAttempts,
 			activateAt: quizData.activateAt,
@@ -176,20 +182,22 @@ export const actions: Actions = {
 			orderBy: [question.orderIndex]
 		});
 
-		let questionOrder = questions.map((q) => q.id);
-		if (quizData.shuffleQuestions) {
-			questionOrder = [...questionOrder];
-			for (let i = questionOrder.length - 1; i > 0; i--) {
-				const j = Math.floor(Math.random() * (i + 1));
-				[questionOrder[i], questionOrder[j]] = [questionOrder[j], questionOrder[i]];
+		const questionOrder = selectQuestionOrder(
+			questions.map((q) => q.id),
+			{
+				shuffle: quizData.shuffleQuestions,
+				subsetSize: quizData.questionsPerAttempt
 			}
-		}
+		);
+
+		const sessionId = crypto.randomUUID();
+		saveSessionQuestions(sessionId, questionOrder);
 
 		await createQuizSession(cookies, {
 			quizId: quizData.id,
 			participantKey,
 			intakeFormData,
-			questionOrder,
+			sessionId,
 			startedAt: Date.now(),
 			preview
 		});

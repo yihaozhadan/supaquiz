@@ -9,6 +9,7 @@ import {
 } from '$lib/server/quiz-attempts';
 import { normalizeQuestion } from '$lib/server/quiz-actions';
 import { clearQuizSession, getQuizSession } from '$lib/server/quiz-session';
+import { clearSessionQuestions, resolveSessionQuestions } from '$lib/server/session-questions';
 import { clearDraft, getDraft } from '$lib/server/draft-store';
 import { savePreviewAttempt } from '$lib/server/preview-store';
 import { verifySession } from '$lib/server/auth';
@@ -34,7 +35,8 @@ export const load: PageServerLoad = async ({ params, cookies, url }) => {
 	const questions = await db.query.question.findMany({ where: eq(question.quizId, params.id) });
 	const questionsById = new Map(questions.map((q) => [q.id, q]));
 
-	const orderedQuestions = session.questionOrder
+	const questionOrder = await resolveSessionQuestions(session);
+	const orderedQuestions = questionOrder
 		.map((id) => questionsById.get(id))
 		.filter((q): q is NonNullable<typeof q> => Boolean(q))
 		.map((q) => {
@@ -86,13 +88,14 @@ export const actions: Actions = {
 		}
 
 		const timeTakenSeconds = Math.max(0, Math.round((Date.now() - session.startedAt) / 1000));
+		const questionOrder = await resolveSessionQuestions(session);
 
 		if (session.preview) {
 			if (!(await verifySession(cookies))) {
 				return fail(403, { error: 'Preview requires an admin session' });
 			}
 
-			const result = await gradePreviewAttempt(params.id, answers);
+			const result = await gradePreviewAttempt(params.id, answers, questionOrder);
 			if (!result.success) {
 				return fail(400, { error: result.error });
 			}
@@ -103,6 +106,7 @@ export const actions: Actions = {
 				quizId: params.id,
 				participantKey: session.participantKey,
 				intakeFormData: session.intakeFormData,
+				questionIds: questionOrder,
 				answers,
 				score: result.grading.score,
 				totalQuestions: result.grading.totalQuestions,
@@ -112,6 +116,7 @@ export const actions: Actions = {
 
 			clearQuizSession(cookies, params.id);
 			clearDraft(params.id, session.participantKey);
+			if (session.sessionId) clearSessionQuestions(session.sessionId);
 
 			redirect(303, `/quiz/${params.id}/results/${previewId}`);
 		}
@@ -121,7 +126,8 @@ export const actions: Actions = {
 			participantKey: session.participantKey,
 			intakeFormData: session.intakeFormData,
 			answers,
-			timeTakenSeconds
+			timeTakenSeconds,
+			questionIds: questionOrder
 		});
 
 		if (!result.success) {
@@ -130,6 +136,7 @@ export const actions: Actions = {
 
 		clearQuizSession(cookies, params.id);
 		clearDraft(params.id, session.participantKey);
+		if (session.sessionId) clearSessionQuestions(session.sessionId);
 
 		redirect(303, `/quiz/${params.id}/results/${result.attempt.id}`);
 	}

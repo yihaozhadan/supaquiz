@@ -25,6 +25,7 @@
 	import QuestionEditorSheet from '$lib/components/admin/QuestionEditorSheet.svelte';
 	import { toasts } from '$lib/components/admin/toast';
 	import { getEffectiveStatus, validateSchedule, QUIZ_STATUS_LABELS } from '$lib/quiz-status';
+	import { MAX_QUESTIONS_PER_QUIZ } from '$lib/constants';
 	import {
 		ArrowLeft,
 		Plus,
@@ -79,6 +80,7 @@
 	let maxAttempts = $state(quiz.maxAttempts?.toString() || '1');
 	let unlimitedAttempts = $state(quiz.maxAttempts == null);
 	let maxParticipants = $state(quiz.maxParticipants?.toString() || '');
+	let questionsPerAttempt = $state(quiz.questionsPerAttempt?.toString() || '');
 	let shuffleQuestions = $state(quiz.shuffleQuestions);
 	let allowBackNavigation = $state(quiz.allowBackNavigation);
 	let isVisibleAfterExpiry = $state(quiz.isVisibleAfterExpiry ?? true);
@@ -419,7 +421,7 @@
 							<CardDescription>Add and reorder questions for this quiz.</CardDescription>
 						</div>
 						<Badge variant="secondary" class="font-mono">
-							{quiz.questions.length} / 50
+							{quiz.questions.length} / {MAX_QUESTIONS_PER_QUIZ}
 						</Badge>
 					</div>
 				</CardHeader>
@@ -516,7 +518,7 @@
 							onclick={openAddQuestion}
 							variant="outline"
 							class="w-full"
-							disabled={quiz.questions.length >= 50}
+							disabled={quiz.questions.length >= MAX_QUESTIONS_PER_QUIZ}
 						>
 							<Plus class="size-4" />
 							Add Question
@@ -693,6 +695,25 @@
 								placeholder="No limit"
 								oninput={markChanged}
 							/>
+						</div>
+						<div class="space-y-2">
+							<label for="questionsPerAttempt" class="text-sm font-medium text-foreground"
+								>Questions per Attempt</label
+							>
+							<Input
+								type="number"
+								name="questionsPerAttempt"
+								id="questionsPerAttempt"
+								bind:value={questionsPerAttempt}
+								min="1"
+								max={quiz.questions.length || undefined}
+								placeholder="All questions"
+								oninput={markChanged}
+							/>
+							<p class="text-xs text-muted-foreground">
+								Randomly select this many questions from the pool for each attempt. Leave empty to
+								serve all {quiz.questions.length || ''} questions.
+							</p>
 						</div>
 						<div class="space-y-2">
 							<label for="revealAnswersAfter" class="text-sm font-medium text-foreground"

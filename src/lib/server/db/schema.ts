@@ -20,6 +20,7 @@ export const quiz = sqliteTable('quiz', {
 	password: text('password'),
 	timeLimitSeconds: integer('time_limit_seconds'),
 	shuffleQuestions: integer('shuffle_questions', { mode: 'boolean' }).notNull().default(false),
+	questionsPerAttempt: integer('questions_per_attempt'),
 	maxAttempts: integer('max_attempts').default(1),
 	maxParticipants: integer('max_participants'),
 	allowBackNavigation: integer('allow_back_navigation', { mode: 'boolean' })
@@ -81,6 +82,8 @@ export const attempt = sqliteTable('attempt', {
 		.references(() => quiz.id, { onDelete: 'cascade' }),
 	participantKey: text('participant_key').notNull(),
 	intakeFormData: text('intake_form_data', { mode: 'json' }).notNull(),
+	/** The question ids served in this attempt, in the order they were shown. Null for legacy attempts = all quiz questions. */
+	questionIds: text('question_ids', { mode: 'json' }).$type<string[]>(),
 	answers: text('answers', { mode: 'json' }).notNull(),
 	score: integer('score').notNull(),
 	totalQuestions: integer('total_questions').notNull(),
