@@ -20,7 +20,7 @@ A lightweight, self-hostable open-source quiz platform. Create, publish, and tak
 - Answer reveal settings (immediate or never)
 - Public or private listing, with optional visibility after expiry
 - Duplicate a quiz with all of its questions
-- Up to 50 questions per quiz; up to 5 active quizzes at a time
+- Up to 500 questions per quiz; up to 5 active quizzes at a time
 
 ### Admin Dashboard
 
