@@ -14,7 +14,8 @@ import {
 	type SQL
 } from 'drizzle-orm';
 import { db } from './db';
-import { attempt, question, quiz } from './db/schema';
+import { attempt, question, questionGroup, quiz } from './db/schema';
+import { servedQuestionCount } from '$lib/question-selection';
 import {
 	getEffectiveStatus,
 	type EffectiveQuizStatus,
@@ -41,6 +42,69 @@ export interface PublicQuizPage {
 }
 
 const DEFAULT_PAGE_SIZE = 12;
+
+interface QuizGroupSampling {
+	ungroupedCount: number;
+	groups: { size: number; pickCount: number | null }[];
+}
+
+/**
+ * Per-quiz group sampling info used to compute how many questions an attempt
+ * actually serves (ungrouped + per-group picks). Quizzes with no groups at
+ * all are absent from the returned map — their whole pool counts as served.
+ */
+async function fetchGroupSampling(quizIds: string[]): Promise<Map<string, QuizGroupSampling>> {
+	const result = new Map<string, QuizGroupSampling>();
+	if (quizIds.length === 0) return result;
+
+	const [groupCounts, groupRows] = await Promise.all([
+		db
+			.select({ quizId: question.quizId, groupId: question.groupId, count: count() })
+			.from(question)
+			.where(inArray(question.quizId, quizIds))
+			.groupBy(question.quizId, question.groupId),
+		db
+			.select({
+				id: questionGroup.id,
+				quizId: questionGroup.quizId,
+				pickCount: questionGroup.pickCount
+			})
+			.from(questionGroup)
+			.where(inArray(questionGroup.quizId, quizIds))
+	]);
+
+	const picksByQuiz = new Map<string, Map<string, number | null>>();
+	for (const g of groupRows) {
+		let picks = picksByQuiz.get(g.quizId);
+		if (!picks) picksByQuiz.set(g.quizId, (picks = new Map()));
+		picks.set(g.id, g.pickCount);
+	}
+
+	for (const row of groupCounts) {
+		let entry = result.get(row.quizId);
+		if (!entry) result.set(row.quizId, (entry = { ungroupedCount: 0, groups: [] }));
+		const picks = picksByQuiz.get(row.quizId);
+		if (row.groupId == null || !picks?.has(row.groupId)) {
+			entry.ungroupedCount += row.count;
+		} else {
+			entry.groups.push({ size: row.count, pickCount: picks.get(row.groupId) ?? null });
+		}
+	}
+	return result;
+}
+
+/** Questions actually served per attempt; absent group data = whole pool. */
+function resolveServedCount(
+	sampling: QuizGroupSampling | undefined,
+	poolCount: number,
+	questionsPerAttempt: number | null
+): number {
+	return servedQuestionCount({
+		ungroupedCount: sampling?.ungroupedCount ?? poolCount,
+		groups: sampling?.groups ?? [],
+		subsetSize: questionsPerAttempt
+	});
+}
 
 function buildSummary(row: {
 	id: string;
@@ -109,7 +173,7 @@ export async function getPublicQuizzes(limit?: number): Promise<PublicQuizSummar
 
 	const quizIds = quizzes.map((q) => q.id);
 
-	const [questionCounts, attemptCounts] = await Promise.all([
+	const [questionCounts, attemptCounts, groupSampling] = await Promise.all([
 		db
 			.select({ quizId: question.quizId, count: count() })
 			.from(question)
@@ -119,7 +183,8 @@ export async function getPublicQuizzes(limit?: number): Promise<PublicQuizSummar
 			.select({ quizId: attempt.quizId, count: count() })
 			.from(attempt)
 			.where(inArray(attempt.quizId, quizIds))
-			.groupBy(attempt.quizId)
+			.groupBy(attempt.quizId),
+		fetchGroupSampling(quizIds)
 	]);
 
 	const questionCountMap = new Map(questionCounts.map((qc) => [qc.quizId, qc.count]));
@@ -136,7 +201,11 @@ export async function getPublicQuizzes(limit?: number): Promise<PublicQuizSummar
 			activateAt: q.activateAt,
 			expireAt: q.expireAt,
 			createdAt: q.createdAt,
-			questionCount: questionCountMap.get(q.id) ?? 0,
+			questionCount: resolveServedCount(
+				groupSampling.get(q.id),
+				questionCountMap.get(q.id) ?? 0,
+				q.questionsPerAttempt
+			),
 			questionsPerAttempt: q.questionsPerAttempt,
 			attemptCount: attemptCountMap.get(q.id) ?? 0
 		})
@@ -244,8 +313,19 @@ export async function getPublicQuizzesPaged(options: {
 		.from(quiz)
 		.where(and(...filters));
 
+	const groupSampling = await fetchGroupSampling(rows.map((r) => r.id));
+
 	return {
-		quizzes: rows.map(buildSummary),
+		quizzes: rows.map((row) =>
+			buildSummary({
+				...row,
+				questionCount: resolveServedCount(
+					groupSampling.get(row.id),
+					row.questionCount,
+					row.questionsPerAttempt
+				)
+			})
+		),
 		total: totalResult[0].total
 	};
 }

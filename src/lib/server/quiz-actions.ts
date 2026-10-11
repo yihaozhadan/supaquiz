@@ -1,12 +1,14 @@
-import { eq, desc, count, and, inArray } from 'drizzle-orm';
+import { eq, desc, count, and, inArray, asc } from 'drizzle-orm';
 import { db } from './db';
-import { quiz, question, attempt } from './db/schema';
+import { quiz, question, attempt, questionGroup } from './db/schema';
 import {
 	quizCreateSchema,
 	quizUpdateSchema,
 	quizStatusToggleSchema,
 	questionCreateSchema,
-	questionUpdateSchema
+	questionUpdateSchema,
+	questionGroupCreateSchema,
+	questionGroupUpdateSchema
 } from './validations';
 import { saveQuestionMedia, deleteQuestionMedia } from './storage';
 import { getEffectiveStatus, validateSchedule } from '$lib/quiz-status';
@@ -139,16 +141,102 @@ export async function getQuizById(id: string) {
 
 	if (!quizData) return null;
 
-	// Get questions separately
-	const questions = await db.query.question.findMany({
-		where: eq(question.quizId, id),
-		orderBy: [question.orderIndex]
-	});
+	// Get questions and groups separately
+	const [questions, groups] = await Promise.all([
+		db.query.question.findMany({
+			where: eq(question.quizId, id),
+			orderBy: [question.orderIndex]
+		}),
+		db.query.questionGroup.findMany({
+			where: eq(questionGroup.quizId, id),
+			orderBy: [asc(questionGroup.orderIndex), asc(questionGroup.name)]
+		})
+	]);
 
 	return {
 		...quizData,
-		questions: questions.map(normalizeQuestion)
+		questions: questions.map(normalizeQuestion),
+		groups
 	};
+}
+
+export async function listQuestionGroups(quizId: string) {
+	return db.query.questionGroup.findMany({
+		where: eq(questionGroup.quizId, quizId),
+		orderBy: [asc(questionGroup.orderIndex), asc(questionGroup.name)]
+	});
+}
+
+function parseGroupId(raw: unknown): string | null | undefined {
+	if (raw === undefined) return undefined;
+	const value = String(raw).trim();
+	return value === '' ? null : value;
+}
+
+/** Groups must belong to the same quiz as the question they are assigned to. */
+async function validateGroupAssignment(
+	quizId: string,
+	groupId: string | null | undefined
+): Promise<string | null> {
+	if (groupId == null) return null;
+	const group = await db.query.questionGroup.findFirst({
+		where: eq(questionGroup.id, groupId)
+	});
+	if (!group || group.quizId !== quizId) return null;
+	return groupId;
+}
+
+export async function createQuestionGroup(formData: FormData) {
+	const data = Object.fromEntries(formData);
+	const parsed = questionGroupCreateSchema.safeParse({
+		quizId: data.quizId,
+		name: typeof data.name === 'string' ? data.name.trim() : data.name,
+		pickCount: data.pickCount ? Number(data.pickCount) : null
+	});
+
+	if (!parsed.success) {
+		return { success: false, error: 'Invalid data' };
+	}
+
+	const existing = await db.query.questionGroup.findMany({
+		where: eq(questionGroup.quizId, parsed.data.quizId)
+	});
+
+	const newGroup = await db
+		.insert(questionGroup)
+		.values({ ...parsed.data, orderIndex: existing.length })
+		.returning();
+
+	return { success: true, group: newGroup[0] };
+}
+
+export async function updateQuestionGroup(formData: FormData) {
+	const data = Object.fromEntries(formData);
+	const parsed = questionGroupUpdateSchema.safeParse({
+		id: data.id,
+		name: typeof data.name === 'string' ? data.name.trim() : data.name,
+		pickCount: data.pickCount === '' || data.pickCount == null ? null : Number(data.pickCount)
+	});
+
+	if (!parsed.success) {
+		return { success: false, error: 'Invalid data' };
+	}
+
+	const updated = await db
+		.update(questionGroup)
+		.set({ name: parsed.data.name, pickCount: parsed.data.pickCount })
+		.where(eq(questionGroup.id, parsed.data.id))
+		.returning();
+
+	return { success: true, group: updated[0] };
+}
+
+export async function deleteQuestionGroup(id: string) {
+	// Foreign keys are not enforced at runtime, so unassign questions
+	// explicitly — deleting a group must not delete its questions.
+	await db.update(question).set({ groupId: null }).where(eq(question.groupId, id));
+	await db.delete(questionGroup).where(eq(questionGroup.id, id));
+	return { success: true };
 }
 
 export async function createQuiz(formData: FormData) {
@@ -291,6 +379,7 @@ export async function deleteQuiz(id: string) {
 export async function duplicateQuiz(id: string) {
 	const originalQuiz = (await getQuizById(id)) as {
 		questions: any[];
+		groups: { id: string; name: string; pickCount: number | null; orderIndex: number }[];
 		[key: string]: any;
 	} | null;
 	if (!originalQuiz) {
@@ -320,10 +409,27 @@ export async function duplicateQuiz(id: string) {
 		})
 		.returning();
 
+	// Duplicate groups first so question.groupId can be remapped
+	const groupIdMap = new Map<string, string>();
+	if (originalQuiz.groups && originalQuiz.groups.length > 0) {
+		const newGroupIds = originalQuiz.groups.map(() => crypto.randomUUID());
+		await db.insert(questionGroup).values(
+			originalQuiz.groups.map((g, i) => ({
+				id: newGroupIds[i],
+				quizId: newQuiz[0].id,
+				name: g.name,
+				pickCount: g.pickCount,
+				orderIndex: g.orderIndex
+			}))
+		);
+		originalQuiz.groups.forEach((g, i) => groupIdMap.set(g.id, newGroupIds[i]));
+	}
+
 	// Duplicate questions
 	if (originalQuiz.questions && originalQuiz.questions.length > 0) {
 		const questionValues = originalQuiz.questions.map((q: any) => ({
 			quizId: newQuiz[0].id,
+			groupId: q.groupId ? (groupIdMap.get(q.groupId) ?? null) : null,
 			type: q.type,
 			text: q.text,
 			mediaUrl: q.mediaUrl,
@@ -385,6 +491,7 @@ export async function createQuestion(formData: FormData) {
 	const processedData: Record<string, unknown> = {
 		...data,
 		orderIndex: Number(data.orderIndex),
+		groupId: parseGroupId(data.groupId),
 		mediaUrl:
 			typeof data.mediaUrl === 'string' && data.mediaUrl.trim() !== ''
 				? data.mediaUrl.trim()
@@ -402,6 +509,13 @@ export async function createQuestion(formData: FormData) {
 
 	if (!parsed.success) {
 		return { success: false, error: 'Invalid data' };
+	}
+
+	if (parsed.data.groupId) {
+		const validGroupId = await validateGroupAssignment(parsed.data.quizId, parsed.data.groupId);
+		if (!validGroupId) {
+			return { success: false, error: 'Invalid question group' };
+		}
 	}
 
 	// Check question pool size limit
@@ -451,6 +565,7 @@ export async function updateQuestion(formData: FormData) {
 	const processedData: Record<string, unknown> = {
 		...data,
 		orderIndex: data.orderIndex ? Number(data.orderIndex) : undefined,
+		groupId: parseGroupId(data.groupId),
 		mediaUrl:
 			typeof data.mediaUrl === 'string' && data.mediaUrl.trim() !== ''
 				? data.mediaUrl.trim()
@@ -478,6 +593,16 @@ export async function updateQuestion(formData: FormData) {
 		where: eq(question.id, id)
 	});
 	const previousMediaUrl = previousQuestion?.mediaUrl ?? null;
+
+	if (updateData.groupId) {
+		const targetQuizId = quizId ?? previousQuestion?.quizId;
+		const validGroupId = targetQuizId
+			? await validateGroupAssignment(targetQuizId, updateData.groupId)
+			: null;
+		if (!validGroupId) {
+			return { success: false, error: 'Invalid question group' };
+		}
+	}
 
 	const updatedQuestion = await db
 		.update(question)

@@ -5,7 +5,10 @@ import {
 	moveQuestion,
 	deleteQuestion,
 	createQuestion,
-	updateQuestion
+	updateQuestion,
+	createQuestionGroup,
+	updateQuestionGroup,
+	deleteQuestionGroup
 } from '$lib/server/quiz-actions';
 import { redirect, fail } from '@sveltejs/kit';
 
@@ -73,5 +76,25 @@ export const actions = {
 		const id = formData.get('id') as string;
 		await deleteQuestion(id);
 		return { success: true, message: 'Question deleted successfully' };
+	},
+	createGroup: async ({ request }) => {
+		const result = await createQuestionGroup(await request.formData());
+		if (!result.success) {
+			return fail(400, { error: result.error });
+		}
+		return { success: true, message: 'Group created successfully' };
+	},
+	updateGroup: async ({ request }) => {
+		const result = await updateQuestionGroup(await request.formData());
+		if (!result.success) {
+			return fail(400, { error: result.error });
+		}
+		return { success: true, message: 'Group updated successfully' };
+	},
+	deleteGroup: async ({ request }) => {
+		const formData = await request.formData();
+		const id = formData.get('id') as string;
+		await deleteQuestionGroup(id);
+		return { success: true, message: 'Group deleted — its questions are now ungrouped' };
 	}
 };

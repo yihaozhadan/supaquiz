@@ -15,6 +15,10 @@ vi.mock('./db', () => ({
 			},
 			question: {
 				findMany: vi.fn()
+			},
+			questionGroup: {
+				findFirst: vi.fn(),
+				findMany: vi.fn()
 			}
 		},
 		select: vi.fn(),
@@ -33,6 +37,7 @@ describe('Quiz Constraints', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		vi.mocked(db.query.question.findMany).mockResolvedValue([]);
+		vi.mocked(db.query.questionGroup.findMany).mockResolvedValue([]);
 	});
 
 	describe('Max 5 Active Quizzes', () => {

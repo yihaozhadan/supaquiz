@@ -1,6 +1,6 @@
-import { eq } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 import { db } from './db';
-import { question, quiz } from './db/schema';
+import { question, questionGroup, quiz } from './db/schema';
 import { selectQuestionOrder } from '$lib/question-selection';
 import type { QuizSessionPayload } from './quiz-session';
 
@@ -51,10 +51,15 @@ export async function resolveSessionQuestions(session: QuizSessionPayload): Prom
 		where: eq(question.quizId, session.quizId),
 		orderBy: [question.orderIndex]
 	});
-	const order = selectQuestionOrder(
-		questions.map((q) => q.id),
-		{ shuffle: quizData.shuffleQuestions, subsetSize: quizData.questionsPerAttempt }
-	);
+	const groups = await db.query.questionGroup.findMany({
+		where: eq(questionGroup.quizId, session.quizId),
+		orderBy: [asc(questionGroup.orderIndex)]
+	});
+	const order = selectQuestionOrder(questions, {
+		shuffle: quizData.shuffleQuestions,
+		subsetSize: quizData.questionsPerAttempt,
+		groups
+	});
 	if (session.sessionId) saveSessionQuestions(session.sessionId, order);
 	return order;
 }

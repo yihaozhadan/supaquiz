@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 const insertedQuizzes: Record<string, unknown>[] = [];
 const insertedQuestions: Record<string, unknown>[] = [];
+const insertedGroups: Record<string, unknown>[] = [];
 
 vi.mock('./db', () => ({
 	db: {
@@ -21,6 +22,7 @@ import { db } from './db';
 import { copyQuestionMedia } from './storage';
 import { importQuiz, exportQuiz } from './import-export';
 import { getQuizById } from './quiz-actions';
+import { questionGroup } from './db/schema';
 
 vi.mock('./quiz-actions', () => ({
 	getQuizById: vi.fn()
@@ -31,6 +33,7 @@ describe('Quiz Import/Export', () => {
 		vi.clearAllMocks();
 		insertedQuizzes.length = 0;
 		insertedQuestions.length = 0;
+		insertedGroups.length = 0;
 	});
 
 	describe('exportQuiz', () => {
@@ -66,9 +69,11 @@ describe('Quiz Import/Export', () => {
 						correctAnswer: 'true',
 						explanation: null,
 						codeSnippet: null,
-						orderIndex: 0
+						orderIndex: 0,
+						groupId: 'g1'
 					}
-				]
+				],
+				groups: [{ id: 'g1', quizId: 'quiz-1', name: 'Basics', pickCount: 1, orderIndex: 0 }]
 			} as any);
 
 			const result = await exportQuiz('quiz-1');
@@ -77,6 +82,8 @@ describe('Quiz Import/Export', () => {
 			expect(result?.quiz.title).toBe('My Quiz');
 			expect(result?.questions).toHaveLength(1);
 			expect(result?.questions[0].text).toBe('Is this true?');
+			expect(result?.questions[0].groupName).toBe('Basics');
+			expect(result?.groups).toEqual([{ name: 'Basics', pickCount: 1, orderIndex: 0 }]);
 			// Quiz/question ids and status should not be present in export
 			expect((result?.quiz as any).id).toBeUndefined();
 			expect((result?.questions[0] as any).id).toBeUndefined();
@@ -100,7 +107,8 @@ describe('Quiz Import/Export', () => {
 					({
 						values: vi.fn((values: any) => {
 							if (Array.isArray(values)) {
-								insertedQuestions.push(...values);
+								if (table === questionGroup) insertedGroups.push(...values);
+								else insertedQuestions.push(...values);
 								return { returning: vi.fn().mockResolvedValue(values) };
 							}
 							insertedQuizzes.push(values);
@@ -160,7 +168,8 @@ describe('Quiz Import/Export', () => {
 					({
 						values: vi.fn((values: any) => {
 							if (Array.isArray(values)) {
-								insertedQuestions.push(...values);
+								if (table === questionGroup) insertedGroups.push(...values);
+								else insertedQuestions.push(...values);
 								return { returning: vi.fn().mockResolvedValue(values) };
 							}
 							insertedQuizzes.push(values);
@@ -206,6 +215,74 @@ describe('Quiz Import/Export', () => {
 			if (!result.success) return;
 			expect(result.warnings).toHaveLength(1);
 			expect(insertedQuestions[0].mediaUrl).toBeNull();
+		});
+
+		it('recreates groups and re-links questions by group name', async () => {
+			vi.mocked(db.insert).mockImplementation(
+				(table: any) =>
+					({
+						values: vi.fn((values: any) => {
+							if (Array.isArray(values)) {
+								if (table === questionGroup) insertedGroups.push(...values);
+								else insertedQuestions.push(...values);
+								return { returning: vi.fn().mockResolvedValue(values) };
+							}
+							insertedQuizzes.push(values);
+							return {
+								returning: vi.fn().mockResolvedValue([{ ...values, id: 'new-quiz-id' }])
+							};
+						})
+					}) as any
+			);
+
+			const exportData = {
+				version: 1,
+				quiz: {
+					title: 'Grouped Quiz',
+					description: 'Desc',
+					shuffleQuestions: false,
+					allowBackNavigation: true,
+					revealAnswersAfter: 'immediate',
+					intakeFormSchema: [],
+					isPublic: true,
+					isVisibleAfterExpiry: true
+				},
+				questions: [
+					{
+						type: 'fitb',
+						text: 'Grouped question',
+						mediaUrl: null,
+						options: null,
+						correctAnswer: 'a',
+						orderIndex: 0,
+						groupName: 'Basics'
+					},
+					{
+						type: 'fitb',
+						text: 'Orphaned question',
+						mediaUrl: null,
+						options: null,
+						correctAnswer: 'b',
+						orderIndex: 1,
+						groupName: 'Missing Group'
+					}
+				],
+				groups: [{ name: 'Basics', pickCount: 2, orderIndex: 0 }]
+			};
+
+			const result = await importQuiz(JSON.stringify(exportData));
+
+			expect(result.success).toBe(true);
+			if (!result.success) return;
+			expect(insertedGroups).toHaveLength(1);
+			expect(insertedGroups[0]).toMatchObject({
+				quizId: 'new-quiz-id',
+				name: 'Basics',
+				pickCount: 2
+			});
+			expect(insertedQuestions[0].groupId).toBe(insertedGroups[0].id);
+			expect(insertedQuestions[1].groupId).toBeNull();
+			expect(result.warnings.some((w) => w.includes('Missing Group'))).toBe(true);
 		});
 	});
 });

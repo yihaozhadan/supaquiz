@@ -41,7 +41,8 @@
 		FileInput,
 		GripVertical,
 		Pencil,
-		Eye
+		Eye,
+		Layers
 	} from 'lucide-svelte';
 
 	let { data, form } = $props();
@@ -63,6 +64,17 @@
 	});
 
 	const quiz = $derived(data.quiz);
+
+	const groupNameById = $derived(
+		new Map<string, string>((quiz.groups ?? []).map((g) => [g.id, g.name] as const))
+	);
+	const groupQuestionCounts = $derived.by(() => {
+		const counts: Record<string, number> = {};
+		for (const q of quiz.questions) {
+			if (q.groupId) counts[q.groupId] = (counts[q.groupId] ?? 0) + 1;
+		}
+		return counts;
+	});
 
 	let title = $state(quiz.title);
 	let description = $state(quiz.description);
@@ -192,7 +204,8 @@
 					}))
 				: [],
 			correctAnswer: q.correctAnswer,
-			orderIndex: q.orderIndex
+			orderIndex: q.orderIndex,
+			groupId: q.groupId ?? null
 		};
 		questionSheetOpen = true;
 	}
@@ -496,6 +509,12 @@
 											{#if q.codeSnippet}
 												<Badge variant="outline" class="text-xs">Code</Badge>
 											{/if}
+											{#if q.groupId && groupNameById.get(q.groupId)}
+												<Badge variant="secondary" class="text-xs">
+													<Layers class="size-3" />
+													{groupNameById.get(q.groupId)}
+												</Badge>
+											{/if}
 										</div>
 										<p class="line-clamp-2 text-sm text-foreground">{q.text}</p>
 									</div>
@@ -524,6 +543,121 @@
 							Add Question
 						</Button>
 					{/if}
+				</CardContent>
+			</Card>
+
+			<!-- Question Groups Card -->
+			<Card class="mt-4">
+				<CardHeader>
+					<div class="flex items-center justify-between">
+						<div>
+							<CardTitle>Question Groups</CardTitle>
+							<CardDescription>
+								Organize questions into sections. Set a pick count to serve a random subset
+								from a group each attempt — ungrouped questions are always served.
+							</CardDescription>
+						</div>
+						<Badge variant="secondary" class="font-mono">{quiz.groups?.length ?? 0}</Badge>
+					</div>
+				</CardHeader>
+				<CardContent class="space-y-3">
+					{#each quiz.groups ?? [] as group (group.id)}
+						<form
+							method="POST"
+							action="?/updateGroup"
+							use:enhance={() => {
+								return async ({ update }) => {
+									await update();
+								};
+							}}
+							class="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/30 p-3"
+						>
+							<input type="hidden" name="id" value={group.id} />
+							<Input
+								type="text"
+								name="name"
+								value={group.name}
+								required
+								class="min-w-40 flex-1"
+								aria-label="Group name"
+							/>
+							<div class="flex items-center gap-1.5">
+								<Input
+									type="number"
+									name="pickCount"
+									min="1"
+									max={groupQuestionCounts[group.id] ?? undefined}
+									value={group.pickCount ?? ''}
+									placeholder="All"
+									class="w-20"
+									aria-label="Questions picked per attempt"
+								/>
+								<span class="text-xs whitespace-nowrap text-muted-foreground">
+									of {groupQuestionCounts[group.id] ?? 0} picked
+								</span>
+							</div>
+							<div class="ml-auto flex items-center gap-1">
+								<Button type="submit" variant="ghost" size="sm">Save</Button>
+								<Button
+									type="submit"
+									formaction="?/deleteGroup"
+									variant="ghost"
+									size="icon-sm"
+									onclick={(e) => {
+										if (
+											!confirm('Delete this group? Its questions will become ungrouped.')
+										) {
+											e.preventDefault();
+										}
+									}}
+								>
+									<Trash2 class="size-4 text-destructive" />
+									<span class="sr-only">Delete group</span>
+								</Button>
+							</div>
+						</form>
+					{:else}
+						<p class="text-sm text-muted-foreground">
+							No groups yet. Create one to organize questions or serve random subsets.
+						</p>
+					{/each}
+					<Separator />
+					<form
+						method="POST"
+						action="?/createGroup"
+						use:enhance={() => {
+							return async ({ update }) => {
+								await update();
+							};
+						}}
+						class="flex flex-wrap items-center gap-2"
+					>
+						<input type="hidden" name="quizId" value={quiz.id} />
+						<Input
+							type="text"
+							name="name"
+							placeholder="New group name (e.g. Geography)"
+							required
+							class="min-w-40 flex-1"
+							aria-label="New group name"
+						/>
+						<Input
+							type="number"
+							name="pickCount"
+							min="1"
+							placeholder="Pick all"
+							class="w-28"
+							aria-label="Questions picked per attempt"
+						/>
+						<Button type="submit" variant="outline" size="sm">
+							<Plus class="size-4" />
+							Add Group
+						</Button>
+					</form>
+					<p class="text-xs text-muted-foreground">
+						Pick count: randomly serve that many of the group's questions per attempt. Leave
+						empty to serve every question in the group.
+					</p>
 				</CardContent>
 			</Card>
 		</Tabs.Content>
@@ -940,4 +1074,5 @@
 	quizId={quiz.id}
 	question={editingQuestion}
 	orderIndex={quiz.questions.length}
+	groups={quiz.groups ?? []}
 />

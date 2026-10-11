@@ -28,24 +28,28 @@
 		options?: Option[];
 		correctAnswer?: string | string[];
 		orderIndex?: number;
+		groupId?: string | null;
 	}
 
 	let {
 		open = $bindable(false),
 		quizId,
 		question = null,
-		orderIndex = 0
+		orderIndex = 0,
+		groups = []
 	}: {
 		open?: boolean;
 		quizId: string;
 		question?: QuestionData | null;
 		orderIndex?: number;
+		groups?: { id: string; name: string }[];
 	} = $props();
 
 	const isEdit = $derived(!!question?.id);
 
 	// Form state
 	let type = $state<QuestionType>('mcq_single');
+	let groupId = $state<string>('none');
 	let text = $state('');
 	let explanation = $state('');
 	let codeSnippet = $state('');
@@ -96,6 +100,7 @@
 		if (open) {
 			if (question) {
 				type = question.type;
+				groupId = question.groupId ?? 'none';
 				text = question.text;
 				explanation = question.explanation || '';
 				codeSnippet = question.codeSnippet || '';
@@ -151,6 +156,7 @@
 
 	function resetForm() {
 		type = 'mcq_single';
+		groupId = 'none';
 		text = '';
 		explanation = '';
 		codeSnippet = '';
@@ -369,6 +375,7 @@
 				<input type="hidden" name="id" value={question.id} />
 			{/if}
 			<input type="hidden" name="orderIndex" value={orderIndex} />
+			<input type="hidden" name="groupId" value={groupId === 'none' ? '' : groupId} />
 			<input type="hidden" name="options" value={optionsJson} />
 			<input type="hidden" name="correctAnswer" value={correctAnswerValue} />
 			{#if removeMedia}
@@ -394,6 +401,30 @@
 					</Select.Content>
 				</Select.Root>
 			</div>
+
+			<!-- Group Selector -->
+			{#if groups.length > 0}
+				<div class="space-y-2">
+					<Label for="question-group">Group (optional)</Label>
+					<Select.Root type="single" value={groupId} onValueChange={(v) => (groupId = v)}>
+						<Select.Trigger id="question-group" class="w-full">
+							{groupId === 'none'
+								? 'No group'
+								: (groups.find((g) => g.id === groupId)?.name ?? 'No group')}
+						</Select.Trigger>
+						<Select.Content>
+							<Select.Item value="none">No group</Select.Item>
+							{#each groups as group (group.id)}
+								<Select.Item value={group.id}>{group.name}</Select.Item>
+							{/each}
+						</Select.Content>
+					</Select.Root>
+					<p class="text-xs text-muted-foreground">
+						Questions in a group may be randomly sampled per attempt based on the group's
+						settings.
+					</p>
+				</div>
+			{/if}
 
 			<!-- Question Text -->
 			<div class="space-y-2">
