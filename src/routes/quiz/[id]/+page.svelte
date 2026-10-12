@@ -10,6 +10,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
+	import QuestionMedia from '$lib/components/QuestionMedia.svelte';
 	import { Clock, Eye, FileQuestion, Lock, Loader2, ShieldAlert } from 'lucide-svelte';
 	import type { ActionData, PageData } from './$types';
 
@@ -38,14 +39,6 @@
 		{ id: 'true', text: 'True' },
 		{ id: 'false', text: 'False' }
 	];
-
-	function mediaKind(url: string): 'image' | 'audio' | 'video' | 'other' {
-		const ext = url.split(/[?#]/)[0].split('.').pop()?.toLowerCase() ?? '';
-		if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return 'image';
-		if (['mp3', 'wav', 'ogg'].includes(ext)) return 'audio';
-		if (['mp4', 'webm', 'ogv'].includes(ext)) return 'video';
-		return 'other';
-	}
 
 	function isCorrectOption(
 		question: (typeof data.questions)[number],
@@ -180,30 +173,7 @@
 						<CardDescription>{question.text}</CardDescription>
 					</CardHeader>
 					<CardContent class="space-y-4">
-						{#if question.mediaUrl}
-							{#if mediaKind(question.mediaUrl) === 'image'}
-								<img
-									src={question.mediaUrl}
-									alt="Question media"
-									class="w-full rounded-lg object-cover"
-								/>
-							{:else if mediaKind(question.mediaUrl) === 'audio'}
-								<audio controls src={question.mediaUrl} class="w-full"></audio>
-							{:else if mediaKind(question.mediaUrl) === 'video'}
-								<video controls src={question.mediaUrl} class="w-full rounded-lg">
-									<track kind="captions" srclang="en" label="English" />
-								</video>
-							{:else}
-								<a
-									href={question.mediaUrl}
-									target="_blank"
-									rel="noopener noreferrer"
-									class="text-primary underline"
-								>
-									View media
-								</a>
-							{/if}
-						{/if}
+						<QuestionMedia mediaUrl={question.mediaUrl} />
 
 						{#if question.codeSnippet}
 							<pre class="overflow-x-auto rounded-md bg-muted p-3 text-sm"><code
