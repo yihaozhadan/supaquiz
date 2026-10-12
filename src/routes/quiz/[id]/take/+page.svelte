@@ -3,6 +3,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card';
+	import QuestionMedia from '$lib/components/QuestionMedia.svelte';
 	import { ChevronLeft, ChevronRight, Clock, Eye, Loader2 } from 'lucide-svelte';
 	import type { ActionData, PageData } from './$types';
 
@@ -27,14 +28,6 @@
 		const m = Math.floor(seconds / 60);
 		const s = seconds % 60;
 		return `${m}:${s.toString().padStart(2, '0')}`;
-	}
-
-	function mediaKind(url: string): 'image' | 'audio' | 'video' | 'other' {
-		const ext = url.split(/[?#]/)[0].split('.').pop()?.toLowerCase() ?? '';
-		if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return 'image';
-		if (['mp3', 'wav', 'ogg'].includes(ext)) return 'audio';
-		if (['mp4', 'webm', 'ogv'].includes(ext)) return 'video';
-		return 'other';
 	}
 
 	function setSingleAnswer(questionId: string, value: string) {
@@ -146,17 +139,7 @@
 	</div>
 
 	{#snippet questionBody(question: (typeof data.questions)[number])}
-		{#if question.mediaUrl}
-			{#if mediaKind(question.mediaUrl) === 'image'}
-				<img src={question.mediaUrl} alt="" class="max-h-80 w-full rounded-md object-contain" />
-			{:else if mediaKind(question.mediaUrl) === 'audio'}
-				<audio src={question.mediaUrl} controls class="w-full"></audio>
-			{:else if mediaKind(question.mediaUrl) === 'video'}
-				<video src={question.mediaUrl} controls class="max-h-80 w-full rounded-md">
-					<track kind="captions" />
-				</video>
-			{/if}
-		{/if}
+		<QuestionMedia mediaUrl={question.mediaUrl} />
 
 		{#if question.codeSnippet}
 			<pre class="overflow-x-auto rounded-md bg-muted p-4 text-sm"><code

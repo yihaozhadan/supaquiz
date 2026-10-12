@@ -54,6 +54,7 @@
 		id: string;
 		type: QuestionType;
 		text: string;
+		mediaUrl: string | null;
 		options: unknown;
 		correctAnswer: unknown;
 		explanation: string | null;
@@ -170,6 +171,7 @@
 				id: q.id,
 				type: q.type,
 				text: q.text,
+				mediaUrl: q.mediaUrl,
 				options: Array.isArray(q.options)
 					? (q.options as { id?: string; text: string; isCorrect: boolean }[])
 					: null,

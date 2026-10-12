@@ -2,6 +2,7 @@
 	import * as Sheet from '$lib/components/ui/sheet';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Separator } from '$lib/components/ui/separator';
+	import QuestionMedia from '$lib/components/QuestionMedia.svelte';
 	import { Check, X, Clock, User, Mail, Trophy } from 'lucide-svelte';
 
 	type QuestionType = 'mcq_single' | 'mcq_multi' | 'true_false' | 'fitb';
@@ -16,6 +17,7 @@
 		id: string;
 		type: QuestionType;
 		text: string;
+		mediaUrl: string | null;
 		options: QuestionOption[] | null;
 		correctAnswer: unknown;
 		explanation: string | null;
@@ -261,6 +263,11 @@
 											</Badge>
 										{/if}
 									</div>
+									{#if q.mediaUrl}
+										<div class="mt-2">
+											<QuestionMedia mediaUrl={q.mediaUrl} />
+										</div>
+									{/if}
 									<div class="mt-2 space-y-1 text-sm">
 										<div class="flex gap-2">
 											<span class="shrink-0 text-muted-foreground">Answer:</span>

@@ -8,6 +8,7 @@
 	} from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import { buttonVariants } from '$lib/components/ui/button';
+	import QuestionMedia from '$lib/components/QuestionMedia.svelte';
 	import { resolve } from '$app/paths';
 	import { CheckCircle2, Eye, Trophy, XCircle } from 'lucide-svelte';
 	import type { PageData } from './$types';
@@ -95,6 +96,7 @@
 						</div>
 					</CardHeader>
 					<CardContent class="space-y-2 text-sm">
+						<QuestionMedia mediaUrl={question.mediaUrl} />
 						<p>
 							<span class="font-medium">Correct answer:</span>
 							{Array.isArray(question.correctAnswer)
@@ -121,7 +123,7 @@
 				Back to quiz editor
 			</a>
 		{/if}
-		<a href="/quizzes" class={buttonVariants({ variant: 'outline', class: 'min-h-11' })}>
+		<a href={resolve('/quizzes')} class={buttonVariants({ variant: 'outline', class: 'min-h-11' })}>
 			Browse more quizzes
 		</a>
 	</div>
