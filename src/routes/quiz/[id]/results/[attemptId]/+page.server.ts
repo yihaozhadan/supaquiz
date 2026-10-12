@@ -71,6 +71,7 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 		text: string;
 		type: string;
 		mediaUrl: string | null;
+		codeSnippet: string | null;
 		options: { id?: string; text: string }[] | null;
 		correctAnswer: string | string[];
 		explanation: string | null;
@@ -98,6 +99,7 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 					text: normalized.text,
 					type: normalized.type,
 					mediaUrl: normalized.mediaUrl,
+					codeSnippet: normalized.codeSnippet,
 					options: normalized.options as { id?: string; text: string }[] | null,
 					correctAnswer: normalized.correctAnswer as string | string[],
 					explanation: normalized.explanation

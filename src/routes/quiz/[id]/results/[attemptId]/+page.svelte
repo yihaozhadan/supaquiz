@@ -7,13 +7,31 @@
 		CardDescription
 	} from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
-	import { buttonVariants } from '$lib/components/ui/button';
+	import { Button, buttonVariants } from '$lib/components/ui/button';
 	import QuestionMedia from '$lib/components/QuestionMedia.svelte';
+	import CodeSnippet from '$lib/components/CodeSnippet.svelte';
+	import { paginationRange } from '$lib/pagination';
 	import { resolve } from '$app/paths';
-	import { CheckCircle2, Eye, Trophy, XCircle } from 'lucide-svelte';
+	import { CheckCircle2, ChevronLeft, ChevronRight, Eye, Trophy, XCircle } from 'lucide-svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
+
+	const QUESTIONS_PER_PAGE = 10;
+
+	let currentPage = $state(1);
+	let reviewSection = $state<HTMLDivElement>();
+
+	let pageCount = $derived(Math.ceil(data.questions.length / QUESTIONS_PER_PAGE));
+	let pagedQuestions = $derived(
+		data.questions.slice((currentPage - 1) * QUESTIONS_PER_PAGE, currentPage * QUESTIONS_PER_PAGE)
+	);
+	let pageItems = $derived(paginationRange(currentPage, pageCount));
+
+	function goToPage(page: number) {
+		currentPage = Math.min(Math.max(1, page), pageCount);
+		reviewSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+	}
 
 	function formatDuration(seconds: number): string {
 		const m = Math.floor(seconds / 60);
@@ -74,14 +92,18 @@
 	</Card>
 
 	{#if data.revealAnswers && data.questions.length > 0}
-		<div class="mt-8 space-y-4">
+		<div class="mt-8 space-y-4" bind:this={reviewSection}>
 			<h2 class="text-lg font-semibold">Answer Review</h2>
-			{#each data.questions as question (question.id)}
+			{#each pagedQuestions as question, i (question.id)}
 				{@const correct = isCorrect(question)}
+				{@const questionNumber = (currentPage - 1) * QUESTIONS_PER_PAGE + i + 1}
 				<Card>
 					<CardHeader>
 						<div class="flex items-start justify-between gap-2">
-							<CardTitle class="text-base leading-snug">{question.text}</CardTitle>
+							<CardTitle class="text-base leading-snug">
+								<span class="text-muted-foreground">{questionNumber}.</span>
+								{question.text}
+							</CardTitle>
 							{#if correct}
 								<Badge variant="secondary" class="shrink-0 gap-1">
 									<CheckCircle2 class="h-3.5 w-3.5" />
@@ -97,6 +119,7 @@
 					</CardHeader>
 					<CardContent class="space-y-2 text-sm">
 						<QuestionMedia mediaUrl={question.mediaUrl} />
+						<CodeSnippet code={question.codeSnippet} />
 						<p>
 							<span class="font-medium">Correct answer:</span>
 							{Array.isArray(question.correctAnswer)
@@ -111,6 +134,45 @@
 					</CardContent>
 				</Card>
 			{/each}
+			{#if pageCount > 1}
+				<nav class="flex items-center justify-center gap-1.5 pt-2" aria-label="Answer review pages">
+					<Button
+						variant="outline"
+						size="sm"
+						class="min-h-9 gap-1"
+						disabled={currentPage === 1}
+						onclick={() => goToPage(currentPage - 1)}
+					>
+						<ChevronLeft class="size-4" />
+						Previous
+					</Button>
+					{#each pageItems as item, index (index)}
+						{#if item === 'ellipsis'}
+							<span class="px-1 text-muted-foreground">…</span>
+						{:else}
+							<Button
+								variant={item === currentPage ? 'default' : 'outline'}
+								size="sm"
+								class="min-h-9 min-w-9"
+								aria-current={item === currentPage ? 'page' : undefined}
+								onclick={() => goToPage(item)}
+							>
+								{item}
+							</Button>
+						{/if}
+					{/each}
+					<Button
+						variant="outline"
+						size="sm"
+						class="min-h-9 gap-1"
+						disabled={currentPage === pageCount}
+						onclick={() => goToPage(currentPage + 1)}
+					>
+						Next
+						<ChevronRight class="size-4" />
+					</Button>
+				</nav>
+			{/if}
 		</div>
 	{/if}
 
